@@ -41,7 +41,7 @@ app.use(express.json());
 app.post(
   "/api/webhook/paystack",
   express.raw({ type: "application/json" }),
-  (req: any, res: any) => paystackWebhook(req, res)
+  (req: Request, res: Response) => paystackWebhook(req, res)
 );
 
 
