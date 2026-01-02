@@ -111,7 +111,7 @@ app.post("/api/test-save-receipt", async (req, res) => {
 /* ---------------------------------------------
    TEST SERVER ROUTE
 ---------------------------------------------- */
-app.get("/test", (req, res) => {
+app.get("/test", (req: Request, res: Response) => {
   res.json({ message: "SERVER IS ALIVE ✅" });
 });
 
