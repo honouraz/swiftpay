@@ -1,3 +1,6 @@
+// src/types/express/index.d.ts
+import 'express'; // <- this is critical: we import express to augment it
+
 declare global {
   namespace Express {
     interface User {
@@ -12,5 +15,4 @@ declare global {
     }
   }
 }
-
 export {};
