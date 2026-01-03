@@ -1,9 +1,10 @@
-import { Request, Response } from "express";
+import { Response } from "express";
+import { AuthRequest } from "../types/AuthRequest";
 import bcrypt from "bcryptjs";
 import User from "../models/User";
 import SubAdmin from "../models/SubAdmin";
 
-export const createSubAdmin = async (req: Request, res: Response) => {
+export const createSubAdmin = async (req: AuthRequest, res: Response) => {
   try {
     // THIS NA THE CORRECT PLACE FOR THIS CODE
     const ADMIN_EMAILS = [

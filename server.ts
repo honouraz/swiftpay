@@ -18,24 +18,6 @@ dotenv.config(); // Must be first
 const app = express();
 
 /* ---------------------------------------------
-   RAW HANDLER FOR PAYSTACK SIGNATURE
----------------------------------------------- */
-app.use(
-  bodyParser.json({
-    limit: "5mb",
-    verify: (req: any, res, buf) => {
-      req.rawBody = buf; // store raw body for webhook signing
-    },
-  })
-);
-
-/* ---------------------------------------------
-   CORS & JSON PARSER
----------------------------------------------- */
-app.use(cors());
-app.use(express.json());
-
-/* ---------------------------------------------
    PAYSTACK 
 ---------------------------------------------- */
 app.post(
@@ -44,6 +26,10 @@ app.post(
   (req: Request, res: Response) => paystackWebhook(req, res)
 );
 
+
+
+app.use(cors());
+app.use(express.json({ limit: "5mb" }));
 
 
 /* ---------------------------------------------
@@ -118,12 +104,14 @@ app.get("/test", (req: Request, res: Response) => {
 /* ---------------------------------------------
    PDF RECEIPT GENERATOR
 ---------------------------------------------- */
-app.post("/api/receipt/:id", (req, res) => {
+app.post("/api/receipt/:id", (req: Request, res: Response) => {
   console.log("RECEIPT REQUESTED → ID:", req.params.id);
   generateReceipt(req, res);
 });
 
-app.all("/api/receipt-by-ref/:reference", async (req: any, res) => {
+app.all(
+  "/api/receipt-by-ref/:reference",
+  async (req: Request & { params: any }, res: Response) => {
   try {
     const payment = await Payment.findOne({ reference: req.params.reference });
     if (!payment) return res.status(404).send("Payment not found");
@@ -140,7 +128,11 @@ app.all("/api/receipt-by-ref/:reference", async (req: any, res) => {
    REQUEST LOGGER (keep this last)
 ---------------------------------------------- */
 app.use((req: Request, res: Response, next: NextFunction) => {
-  console.log(`[${req.method}] ${req.url} - Body:`, req.body);
+  if (req.originalUrl.includes("/webhook")) {
+    console.log(`[${req.method}] ${req.url} - RAW BODY RECEIVED`);
+  } else {
+    console.log(`[${req.method}] ${req.url} - Body:`, req.body);
+  }
   next();
 });
 

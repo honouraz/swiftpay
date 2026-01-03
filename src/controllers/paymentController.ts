@@ -9,7 +9,10 @@ import Payment from "../models/Payment";
 /* =====================================================
    PAYSTACK — INITIALIZE PAYMENT
 ===================================================== */
-export const initializePayment = async (req: any, res: Response) => {
+export const initializePayment = async (
+  req: Request & { user?: { id: string; email?: string } },
+  res: Response
+) => {
   console.log("INIT BODY:", req.body);
 
   try {

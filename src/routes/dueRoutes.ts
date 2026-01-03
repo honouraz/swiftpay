@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import {
   getAllDues,
   createDue,
@@ -8,6 +8,7 @@ import {
 } from "../controllers/duesController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { isSuperAdmin } from "../middlewares/isSuperAdmin";
+
 const router = express.Router();
 
 const DEPARTMENTS = [
@@ -41,7 +42,7 @@ router.get("/admin", authMiddleware, isSuperAdmin, getAdminDues);
 /**
  * Departments
  */
-router.get("/departments/list", (req, res) => {
+router.get("/departments/list", (req: Request, res: Response) => {
   res.status(200).json({ departments: DEPARTMENTS });
 });
 

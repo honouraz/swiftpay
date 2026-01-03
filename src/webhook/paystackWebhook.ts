@@ -1,11 +1,11 @@
 import crypto from "crypto";
-import { Response } from "express";
 import Payment from "../models/Payment";
 import User from "../models/User";
+import { Request, Response } from "express";
 
-export const paystackWebhook = async (req: any, res: Response) => {
+export const paystackWebhook = async (req: Request & { body: Buffer }, res: Response) => {
   try {
-    const raw = req.rawBody;
+    const raw = req.body;
     const secret = process.env.PAYSTACK_SECRET_KEY!;
 
     const hash = crypto

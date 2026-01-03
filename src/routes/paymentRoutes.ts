@@ -9,6 +9,7 @@ import {
 import { generateReceipt } from "../controllers/receiptController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { isSuperAdmin } from "../middlewares/isSuperAdmin";
+import { Router, Request, Response } from "express";
 
 const router = express.Router();
 

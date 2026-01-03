@@ -1,9 +1,10 @@
-import { Request, Response } from "express";
+import { Response, Request } from "express";
+import { AuthRequest } from "../types/AuthRequest";
 import SubAdmin from "../models/SubAdmin";
 import bcrypt from "bcryptjs";
 import Payment from "../models/Payment";
 
-export const createSubAdmin = async (req: Request, res: Response) => {
+export const createSubAdmin = async (req: AuthRequest, res: Response) => {
   try {
     // FIX: Check both role from token and email fallback
     const isSuperAdmin = req.user?.role === "superadmin" || 
@@ -53,8 +54,7 @@ export const getAllSubAdmins = async (req: Request, res: Response) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-export const getByAssociation = async (req: Request, res: Response) => {
+export const getByAssociation = async (req: any, res: Response) => {
   try {
     const { associationName } = req.params;
     const subs = await SubAdmin.find({ association: associationName });
@@ -71,7 +71,7 @@ export const getSubAdmins = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Failed to fetch subadmins" });
   }
 };
-export const getSubAdminPayments = async (req: Request, res: Response) => {
+export const getSubAdminPayments = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });

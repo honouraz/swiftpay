@@ -2,6 +2,7 @@ import express from "express";
 import { getAllPayments, searchPayments } from "../controllers/adminPaymentController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { isSuperAdmin } from "../middlewares/isSuperAdmin";
+import { Router, Request, Response } from "express";
 
 const router = express.Router();
 
