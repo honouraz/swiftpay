@@ -38,7 +38,7 @@ app.use(express.json({ limit: "5mb" }));
 app.post(
   "/api/webhook/test",
   express.raw({ type: "application/json" }),
-  async (req: any, res) => {
+  async (req: Request, res: Response) => {
     console.log("WEBHOOK TEST HIT");
 
     try {
@@ -73,7 +73,7 @@ app.post(
 /* ---------------------------------------------
    MANUAL TEST RECEIPT SAVE
 ---------------------------------------------- */
-app.post("/api/test-save-receipt", async (req, res) => {
+app.post("/api/test-save-receipt", async (req: Request, res: Response) => {
   try {
     const testPayment = await Payment.create({
       reference: "TEST_" + Date.now(),
