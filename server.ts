@@ -28,8 +28,10 @@ app.post(
 
 
 
-app.use(cors());
-app.use(express.json({ limit: "5mb" }));
+app.use(cors({
+  origin: "*", // Allow all for now — change to your frontend URL later
+  credentials: true
+}));app.use(express.json({ limit: "5mb" }));
 
 
 /* ---------------------------------------------
