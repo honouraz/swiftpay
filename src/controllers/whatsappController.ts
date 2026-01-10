@@ -6,28 +6,47 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN!
 );
 
-export const handleWhatsAppMessage = (req: Request, res: Response) => {
-  const from = req.body.From;   // whatsapp:+234...
-  const body = req.body.Body;   // message text
+export const handleWhatsAppMessage = async (req: Request, res: Response) => {
+  try {
+    // For sandbox, only POST comes – no GET verification
+    if (req.method !== "POST") return res.sendStatus(405);
 
-  console.log("Incoming WhatsApp:", from, body);
+    const body = req.body;
 
-  const MessagingResponse = twilio.twiml.MessagingResponse;
-  const twiml = new MessagingResponse();
+    // Check if there's actually a message (ignore delivery statuses)
+    if (!body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]) {
+      console.log("Status update or empty webhook – ignoring");
+      return res.sendStatus(200);
+    }
 
-  if (!body || body.toLowerCase() === "hi") {
-    twiml.message(
-`Welcome to SwiftPay 👋
+    const message = body.entry[0].changes[0].value.messages[0];
+    const fromWaId = message.from; // e.g. "2348127327090" (without +)
+    const text = message.text?.body?.trim().toLowerCase() || "";
 
-1️⃣ Pay Dues
-2️⃣ Generate Receipt
+    console.log(`Incoming WA from ${fromWaId}: "${text}"`);
 
-Reply with 1 or 2`
-    );
-  } else {
-    twiml.message("Invalid option. Reply with 1 or 2.");
+    let reply = "Welcome to SwiftPay 👋\n\nReply with:\n1 - Pay Dues\n2 - Generate Receipt";
+
+    if (text === "1") {
+      reply = "Send your matric number to start payment";
+    } else if (text === "2") {
+      reply = "Send your payment reference to get receipt";
+    } else if (text.includes("hi") || text === "") {
+      // welcome stays
+    } else {
+      reply = "Invalid. Reply with 1 or 2";
+    }
+
+    // Send reply using Twilio
+    await client.messages.create({
+      from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, // e.g. whatsapp:+14155238886
+      to: `whatsapp:+${fromWaId}`,
+      body: reply
+    });
+
+    res.sendStatus(200); // ALWAYS 200 for Twilio/Meta
+  } catch (err: any) {
+    console.error("WA Error:", err.message);
+    res.sendStatus(200); // Never send error to Twilio
   }
-
-  res.set("Content-Type", "text/xml");
-  res.send(twiml.toString());
 };
