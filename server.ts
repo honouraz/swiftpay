@@ -33,7 +33,9 @@ app.post(
 app.use(cors({
   origin: "*", // Allow all for now — change to your frontend URL later
   credentials: true
-}));app.use(express.json({ limit: "5mb" }));
+}));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: "5mb" }));
 
 
 /* ---------------------------------------------

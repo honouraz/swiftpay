@@ -6,28 +6,28 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN!
 );
 
-export const handleWhatsAppMessage = async (req: Request, res: Response) => {
-  const from = req.body.From;      // whatsapp:+234...
-  const body = req.body.Body?.trim();
+export const handleWhatsAppMessage = (req: Request, res: Response) => {
+  const from = req.body.From;   // whatsapp:+234...
+  const body = req.body.Body;   // message text
 
   console.log("Incoming WhatsApp:", from, body);
 
-  let reply = "Welcome to SwiftPay 👋";
+  const MessagingResponse = twilio.twiml.MessagingResponse;
+  const twiml = new MessagingResponse();
 
   if (!body || body.toLowerCase() === "hi") {
-    reply = `Welcome to SwiftPay 👋
+    twiml.message(
+`Welcome to SwiftPay 👋
 
 1️⃣ Pay Dues
 2️⃣ Generate Receipt
 
-Reply with 1 or 2`;
+Reply with 1 or 2`
+    );
+  } else {
+    twiml.message("Invalid option. Reply with 1 or 2.");
   }
 
-  await client.messages.create({
-    from: "whatsapp:+14155238886", // Twilio sandbox number (fixed)
-    to: from,
-    body: reply,
-  });
-
-  res.sendStatus(200);
+  res.set("Content-Type", "text/xml");
+  res.send(twiml.toString());
 };
