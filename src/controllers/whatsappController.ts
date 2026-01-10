@@ -8,45 +8,45 @@ const client = twilio(
 
 export const handleWhatsAppMessage = async (req: Request, res: Response) => {
   try {
-    // For sandbox, only POST comes – no GET verification
-    if (req.method !== "POST") return res.sendStatus(405);
+    // Twilio Sandbox uses form-urlencoded POST (not JSON), so use req.body directly
+    // For safety, log the full incoming body once to debug
+    console.log("FULL INCOMING WEBHOOK BODY:", JSON.stringify(req.body, null, 2));
 
-    const body = req.body;
+    const from = req.body.From;          // whatsapp:+234...
+    const to = req.body.To;              // whatsapp:+1415...
+    const bodyText = (req.body.Body || "").trim();  // the message text
 
-    // Check if there's actually a message (ignore delivery statuses)
-    if (!body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]) {
-      console.log("Status update or empty webhook – ignoring");
+    if (!from || !bodyText) {
+      console.log("No From or Body → likely status update");
       return res.sendStatus(200);
     }
 
-    const message = body.entry[0].changes[0].value.messages[0];
-    const fromWaId = message.from; // e.g. "2348127327090" (without +)
-    const text = message.text?.body?.trim().toLowerCase() || "";
+    console.log(`Incoming WhatsApp from ${from}: "${bodyText}"`);
 
-    console.log(`Incoming WA from ${fromWaId}: "${text}"`);
+    let replyText = "Welcome to SwiftPay 👋\n\nReply with:\n1️⃣ Pay Dues\n2️⃣ Generate Receipt";
 
-    let reply = "Welcome to SwiftPay 👋\n\nReply with:\n1 - Pay Dues\n2 - Generate Receipt";
+    const lowerText = bodyText.toLowerCase();
 
-    if (text === "1") {
-      reply = "Send your matric number to start payment";
-    } else if (text === "2") {
-      reply = "Send your payment reference to get receipt";
-    } else if (text.includes("hi") || text === "") {
-      // welcome stays
+    if (lowerText === "1") {
+      replyText = "Please send your matric number to proceed with payment";
+    } else if (lowerText === "2") {
+      replyText = "Send your payment reference to generate receipt";
+    } else if (lowerText.includes("hi") || lowerText === "") {
+      // welcome message
     } else {
-      reply = "Invalid. Reply with 1 or 2";
+      replyText = "Invalid option. Reply with 1 or 2.";
     }
 
-    // Send reply using Twilio
+    // Send the reply
     await client.messages.create({
-      from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, // e.g. whatsapp:+14155238886
-      to: `whatsapp:+${fromWaId}`,
-      body: reply
+      from: process.env.TWILIO_WHATSAPP_NUMBER,  // e.g. whatsapp:+14155238886
+      to: from,
+      body: replyText
     });
 
-    res.sendStatus(200); // ALWAYS 200 for Twilio/Meta
+    res.sendStatus(200);
   } catch (err: any) {
-    console.error("WA Error:", err.message);
-    res.sendStatus(200); // Never send error to Twilio
+    console.error("WhatsApp webhook error:", err.message);
+    res.sendStatus(200); // MUST return 200 always
   }
 };
