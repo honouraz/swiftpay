@@ -20,7 +20,6 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
       console.log("No From or Body → likely status update");
       return res.sendStatus(200);
     }
-
     console.log(`Incoming WhatsApp from ${from}: "${bodyText}"`);
 
     let replyText = "Welcome to SwiftPay 👋\n\nReply with:\n1️⃣ Pay Dues\n2️⃣ Generate Receipt";
