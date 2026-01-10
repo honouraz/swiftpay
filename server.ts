@@ -39,7 +39,7 @@ app.use(express.json({ limit: "5mb" }));
 
 
 /* ---------------------------------------------
-   WEBHOOK TEST ROUTE
+   WEBHOOK TEST ROUTEs
 ---------------------------------------------- */
 app.post(
   "/api/webhook/test",
