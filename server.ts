@@ -12,6 +12,8 @@ import Payment from "./src/models/Payment";
 import { generateReceipt } from "./src/controllers/receiptController";
 import adminRoutes from "./src/routes/adminRoutes";
 import subAdminRoutes from "./src/routes/subAdminRoutes";
+import whatsappRoutes from "./src/routes/whatsappRoutes";
+
 
 dotenv.config(); // Must be first
 
@@ -145,6 +147,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/dues", dueRoutes);
 app.use("/api/payments", paymentRoutes);
 
+app.use("/api/whatsapp", whatsappRoutes);
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/subadmin", subAdminRoutes);
