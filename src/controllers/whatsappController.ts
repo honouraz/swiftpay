@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import twilio from "twilio";
 import Conversation from "../models/conversation"; // Your model
 import Due from "../models/Due"; // Assuming you have Due model
+import { paystack } from "../services/paystack";
+import { generateReceipt } from "../controllers/receiptController";
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
@@ -116,26 +118,99 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
         reply = "Select your **Level**:\n\n1. 100 Level\n2. 200 Level\n3. 300 Level\n4. 400 Level\n5. 500 Level";
       }
     } else if (conv.currentStep === "choose_level") {
-      const levelMap: Record<string, string> = { "1": "100", "2": "200", "3": "300", "4": "400", "5": "500" };
-      const level = levelMap[bodyText];
-      if (!level) {
-        reply = "Invalid level. Reply 1-5.";
-      } else {
-        conv.data.level = level;
+  const levelMap: Record<string, string> = { "1": "100", "2": "200", "3": "300", "4": "400", "5": "500" };
+  const level = levelMap[bodyText];
+  if (!level) {
+    reply = "Invalid level. Reply 1-5.";
+  } else {
+    conv.data.level = level;
 
-        // Here: Trigger payment – create dedicated account via Paystack
-        // For now, placeholder – implement /payments/paystack/dedicated-account endpoint
-        // Assume you call your own API internally
-        const paymentInfo = {
-          amount: 5000, // Calculate real amount from due.prices[level]
-          accountNumber: "1234567890",
-          bankName: "SwiftPay Virtual (Test Bank)",
-          reference: "REF_" + Date.now()
-        };
+    // Fetch the selected due with full prices
+    const selectedDue = await Due.findById(conv.data.dueId);
+    if (!selectedDue) {
+      reply = "Due not found. Starting over...";
+      conv.currentStep = "idle";
+      conv.data = {};
+      await conv.save();
+      await sendMessage(from, reply);
+      return res.sendStatus(200);
+    }
 
-        reply = `Payment details:\n\nAmount: ₦${paymentInfo.amount.toLocaleString()}\nBank: ${paymentInfo.bankName}\nAccount: ${paymentInfo.accountNumber}\nReference: ${paymentInfo.reference}\n\nTransfer now! We'll confirm automatically.`;
-        conv.currentStep = "payment_pending";
+    const priceKey = level; // e.g. "100", "200"
+    const baseAmount = selectedDue.prices?.[priceKey] || 0;
+
+    if (baseAmount <= 0) {
+      reply = "No price set for this level. Contact support.";
+    } else {
+      // Calculate total like in your frontend
+      const platformFeePercent = selectedDue.platformFeePercent ?? 7;
+      const extraCharge = selectedDue.extraCharge ?? 0;
+      const platformCommission = selectedDue.extraCharge === 0 
+        ? Math.round((baseAmount * platformFeePercent) / 100)
+        : 0;
+      const totalKobo = Math.round((baseAmount + platformCommission + extraCharge) * 100);
+
+      // Step 1: Create Paystack Customer (needed for dedicated account)
+      let customerCode: string;
+      try {
+        const customerRes = await paystack.post("/customer", {
+          email: conv.data.email,
+          first_name: conv.data.name.split(" ")[0] || "User",
+          last_name: conv.data.name.split(" ").slice(1).join(" ") || "",
+          phone: conv.data.phone,
+          metadata: {
+            matricNumber: conv.data.matricNumber,
+            department: conv.data.department,
+            waId: waId,
+            source: "whatsapp"
+          }
+        });
+        customerCode = customerRes.data.data.customer_code;
+      } catch (err: any) {
+        console.error("Customer creation error:", err.response?.data || err);
+        reply = "Couldn't prepare payment. Try again later or type 'exit'.";
+        await conv.save();
+        await sendMessage(from, reply);
+        return res.sendStatus(200);
       }
+
+      // Step 2: Create Dedicated Virtual Account (reusable NUBAN)
+      let accountInfo;
+      try {
+        const dvaRes = await paystack.post("/dedicated_account", {
+          customer: customerCode,
+          preferred_bank: "wema-bank", // or "titan" if available — check /dedicated_account/providers
+          // Optional: split_code, subaccount if you have splits
+        });
+
+        accountInfo = dvaRes.data.data;
+      } catch (err: any) {
+        console.error("DVA creation error:", err.response?.data || err);
+        reply = "Payment setup failed. Try again later.";
+        await conv.save();
+        await sendMessage(from, reply);
+        return res.sendStatus(200);
+      }
+
+      // Save important info for webhook matching
+      conv.data.reference = "WA_" + Date.now() + "_" + waId.slice(-6);
+      conv.data.totalAmount = totalKobo / 100; // Naira for logging
+      conv.data.baseAmount = baseAmount;
+      conv.data.platformCommission = platformCommission;
+      conv.data.extraCharge = extraCharge;
+      conv.data.customerCode = customerCode;
+      conv.data.dvaAccountNumber = accountInfo.account_number;
+      conv.data.dvaBankName = accountInfo.bank.name || "Wema Bank";
+      conv.currentStep = "payment_pending";
+
+      reply = `Payment ready!\n\n` +
+        `Amount: ₦${(totalKobo / 100).toLocaleString()}\n` +
+        `Bank: ${accountInfo.bank.name || "Wema Bank"}\n` +
+        `Account Number: ${accountInfo.account_number}\n` +
+        `Account Name: ${accountInfo.assignee.account_name || conv.data.name}\n\n` +
+        `Transfer exactly ₦${(totalKobo / 100).toLocaleString()} to this account now.\n` +
+        `We'll confirm automatically within minutes and send your receipt!\n\n` +
+        `(Type 'exit' to cancel)`;
     }
 
     await conv.save();
@@ -143,6 +218,7 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
     if (reply) {
       await sendMessage(from, reply);
     }
+  }
 
     res.sendStatus(200);
   } catch (err: any) {
