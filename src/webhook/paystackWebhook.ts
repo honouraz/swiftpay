@@ -77,11 +77,11 @@ try {
   if (waConv) {
     const receiptMessage = 
   `🎉 PAYMENT CONFIRMED!\n\n` +
-  `Receipt for: ${payment.dueName ?? "Dues Payment"}\n` +  // ← use ?? (nullish coalescing)
-  `Amount: ₦${payment.amount?.toLocaleString() ?? "N/A"}\n` +
-  `Payer: ${payment.payerName ?? "N/A"}\n` +
-  `Matric: ${payment.matricNumber ?? "N/A"}\n` +
-  `Reference: ${payment.reference ?? "N/A"}\n\n` +
+  `Receipt for: ${(payment as any).dueName ?? "Dues Payment"}\n` +
+  `Amount: ₦${(payment as any).amount?.toLocaleString() ?? "N/A"}\n` +
+  `Payer: ${(payment as any).payerName ?? "N/A"}\n` +
+  `Matric: ${(payment as any).matricNumber ?? "N/A"}\n` +
+  `Reference: ${(payment as any).reference ?? "N/A"}\n\n` +
   `Thank you for using SwiftPay!`;
 
     await client.messages.create({
