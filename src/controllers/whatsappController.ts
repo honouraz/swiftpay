@@ -57,7 +57,7 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
       conv = await Conversation.create({ waId, currentStep: "idle", data: {} });
     }
 
-    let reply = "";
+        let reply = "";
 
     if (conv.currentStep === "idle") {
       if (lowerText === "1") {
@@ -94,7 +94,6 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
         conv.data.department = DEPARTMENTS[deptIndex];
         conv.currentStep = "choose_due";
 
-        // Fetch dues from DB
         const dues = await Due.find().select("name _id");
         if (dues.length === 0) {
           reply = "No dues available right now. Try later!";
@@ -136,7 +135,8 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
         }
 
         const priceKey = level;
-const baseAmount = (selectedDue.prices as Record<string, number>)?.[priceKey] || 0;
+        const baseAmount = (selectedDue.prices as Record<string, number>)?.[priceKey] || 0;
+
         if (baseAmount <= 0) {
           reply = "No price set for this level. Contact support.";
         } else {
@@ -205,12 +205,13 @@ const baseAmount = (selectedDue.prices as Record<string, number>)?.[priceKey] ||
             `(Type 'exit' to cancel)`;
         }
       }
+    }
 
-      await conv.save();
+    // IMPORTANT: Always save and send reply if set (move outside the chain!)
+    await conv.save();
 
-      if (reply) {
-        await sendMessage(from, reply);
-      }
+    if (reply) {
+      await sendMessage(from, reply);
     }
 
     res.sendStatus(200);
