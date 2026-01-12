@@ -65,6 +65,19 @@ const extraCharge = Number(meta.extraCharge || 0);
 
       console.log("✅ PAYSTACK PAYMENT SAVED:", payment.reference);
 
+      const pdfBuffer = await generateReceiptBuffer(payment._id.toString());
+
+// Temporary public upload (use free service like tmpfiles.org or Render public folder)
+// Example placeholder (implement real upload):
+const pdfUrl = "https://example.com/receipts/" + payment.reference + ".pdf"; // Upload logic here
+
+await client.messages.create({
+  from: process.env.TWILIO_WHATSAPP_NUMBER!,
+  to: `whatsapp:+${waConv.waId}`,
+  body: "Your receipt is ready! 🎉",
+  mediaUrl: [pdfUrl]
+});
+
       // NEW: Try to find matching WhatsApp conversation & send receipt
       try {
         const waConv = await Conversation.findOne({

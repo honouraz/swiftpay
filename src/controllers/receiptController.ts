@@ -6,6 +6,21 @@ import Payment from "../models/Payment";
 import path from "path";
 import fs from "fs";
 
+export const generateReceiptBuffer = async (paymentId: string): Promise<Buffer> => {
+  return new Promise((resolve, reject) => {
+    const fakeReq = { params: { id: paymentId } } as any;
+    const chunks: Buffer[] = [];
+    const fakeRes = {
+      setHeader: () => {},
+      write: (chunk: Buffer) => chunks.push(chunk),
+      end: () => resolve(Buffer.concat(chunks)),
+      status: () => fakeRes,
+    };
+
+    generateReceipt(fakeReq, fakeRes as any);
+  });
+};
+
 export const generateReceipt = async (req: Request, res: Response) => {
   try {
     const payment = await Payment.findById(req.params.id);
