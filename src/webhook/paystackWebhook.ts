@@ -77,8 +77,7 @@ try {
   if (waConv) {
     const receiptMessage = 
       `🎉 PAYMENT CONFIRMED!\n\n` +
-      `Receipt for: ${payment.dueName || "Dues Payment"}\n` +  // ← safe fallback
-      `Amount: ₦${payment.amount.toLocaleString()}\n` +
+`Receipt for: ${payment.dueName ?? "Dues Payment"}\n` +      `Amount: ₦${payment.amount.toLocaleString()}\n` +
       `Payer: ${payment.payerName || "N/A"}\n` +
       `Matric: ${payment.matricNumber || "N/A"}\n` +
       `Reference: ${payment.reference}\n\n` +
