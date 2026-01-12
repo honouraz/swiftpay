@@ -67,38 +67,39 @@ export const paystackWebhook = async (req: Request & { body: Buffer }, res: Resp
       console.log("✅ PAYSTACK PAYMENT SAVED:", payment.reference);
 
       // Send text receipt via WhatsApp (safe, no PDF issues yet)
-      try {
-        const waConv = await Conversation.findOne({
-          "data.reference": d.reference,
-          currentStep: "payment_pending"
-        });
+      // NEW: Try to find matching WhatsApp conversation & send receipt
+try {
+  const waConv = await Conversation.findOne({
+    "data.reference": d.reference,
+    currentStep: "payment_pending"
+  });
 
-        if (waConv) {
-          const receiptMessage = 
-            `🎉 PAYMENT CONFIRMED!\n\n` +
-            `Receipt for: ${payment.dueName || "Dues Payment"}\n` +
-            `Amount: ₦${payment.amount.toLocaleString()}\n` +
-            `Payer: ${payment.payerName || "N/A"}\n` +
-            `Matric: ${payment.matricNumber || "N/A"}\n` +
-            `Reference: ${payment.reference}\n\n` +
-            `Thank you for using SwiftPay!`;
+  if (waConv) {
+    const receiptMessage = 
+      `🎉 PAYMENT CONFIRMED!\n\n` +
+      `Receipt for: ${payment.dueName || "Dues Payment"}\n` +  // ← safe fallback
+      `Amount: ₦${payment.amount.toLocaleString()}\n` +
+      `Payer: ${payment.payerName || "N/A"}\n` +
+      `Matric: ${payment.matricNumber || "N/A"}\n` +
+      `Reference: ${payment.reference}\n\n` +
+      `Thank you for using SwiftPay!`;
 
-          await client.messages.create({
-            from: process.env.TWILIO_WHATSAPP_NUMBER!,
-            to: `whatsapp:+${waConv.waId}`,
-            body: receiptMessage
-          });
+    await client.messages.create({
+      from: process.env.TWILIO_WHATSAPP_NUMBER!,
+      to: `whatsapp:+${waConv.waId}`,
+      body: receiptMessage
+    });
 
-          console.log(`Receipt text sent to ${waConv.waId}`);
+    console.log(`✅ Receipt text sent to ${waConv.waId}`);
 
-          // Reset conversation
-          waConv.currentStep = "idle";
-          waConv.data = {};
-          await waConv.save();
-        }
-      } catch (receiptErr: any) {
-        console.error("Receipt send error:", receiptErr.message);
-      }
+    // Reset conversation
+    waConv.currentStep = "idle";
+    waConv.data = {};
+    await waConv.save();
+  }
+} catch (receiptErr: any) {
+  console.error("Receipt send error:", receiptErr.message);
+}
     }
   } catch (err: any) {
     console.error("❌ WEBHOOK ERROR:", err.message);
