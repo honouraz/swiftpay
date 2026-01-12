@@ -1,7 +1,14 @@
 import crypto from "crypto";
 import Payment from "../models/Payment";
 import User from "../models/User";
+import Conversation from "../models/conversation"; // Add this import
+import twilio from "twilio"; // Add this import
 import { Request, Response } from "express";
+
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID!,
+  process.env.TWILIO_AUTH_TOKEN!
+);
 
 export const paystackWebhook = async (req: Request & { body: Buffer }, res: Response) => {
   try {
@@ -25,12 +32,11 @@ export const paystackWebhook = async (req: Request & { body: Buffer }, res: Resp
       const meta = d.metadata || {};
 
       const baseAmount = Number(meta.baseAmount || 0);
-const platformCommission = Number(meta.platformCommission || 0);
-const extraCharge = Number(meta.extraCharge || 0);
+      const platformCommission = Number(meta.platformCommission || 0);
+      const extraCharge = Number(meta.extraCharge || 0);
 
       const totalAmount = d.amount / 100;
 
-      // Find user by email for userId
       let userId = null;
       const user = await User.findOne({ email: d.customer.email });
       if (user) userId = user._id;
@@ -45,83 +51,45 @@ const extraCharge = Number(meta.extraCharge || 0);
           department: meta.department || "",
           phone: meta.phone || "",
           level: meta.level || "",
-
           dueId: meta.dueId || null,
           dueName: meta.dueName || "SwiftPay Payment",
-
           baseAmount,
           platformCommission,
           extraCharge,
           amount: totalAmount,
-
           paidAt: new Date(d.paid_at),
           metadata: meta,
-          userId,  // Add here
+          userId,
         },
         { new: true, upsert: true }
       );
 
-      // ... after await Payment.findOneAndUpdate(...)
-
       console.log("✅ PAYSTACK PAYMENT SAVED:", payment.reference);
 
-      const pdfBuffer = await generateReceiptBuffer(payment._id.toString());
-
-// Temporary public upload (use free service like tmpfiles.org or Render public folder)
-// Example placeholder (implement real upload):
-const pdfUrl = "https://example.com/receipts/" + payment.reference + ".pdf"; // Upload logic here
-
-await client.messages.create({
-  from: process.env.TWILIO_WHATSAPP_NUMBER!,
-  to: `whatsapp:+${waConv.waId}`,
-  body: "Your receipt is ready! 🎉",
-  mediaUrl: [pdfUrl]
-});
-
-      // NEW: Try to find matching WhatsApp conversation & send receipt
+      // Send text receipt via WhatsApp (safe, no PDF issues yet)
       try {
         const waConv = await Conversation.findOne({
-          "data.reference": payment.reference,
+          "data.reference": d.reference,
           currentStep: "payment_pending"
         });
 
         if (waConv) {
-          // Generate receipt PDF (your existing function)
-          // IMPORTANT: generateReceipt needs req.params.id = payment._id
-          // We fake a req/res just for generation
-          const fakeReq = { params: { id: payment._id.toString() } } as any;
-          const fakeRes = {
-            setHeader: () => {},
-            send: (buffer: Buffer) => buffer, // capture PDF buffer
-            status: () => fakeRes,
-            end: () => {}
-          };
+          const receiptMessage = 
+            `🎉 PAYMENT CONFIRMED!\n\n` +
+            `Receipt for: ${payment.dueName || "Dues Payment"}\n` +
+            `Amount: ₦${payment.amount.toLocaleString()}\n` +
+            `Payer: ${payment.payerName || "N/A"}\n` +
+            `Matric: ${payment.matricNumber || "N/A"}\n` +
+            `Reference: ${payment.reference}\n\n` +
+            `Thank you for using SwiftPay!`;
 
-          // Call your receipt generator → assume it returns PDF buffer
-          const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
-            fakeRes.send = resolve;
-            generateReceipt(fakeReq, fakeRes as any);
+          await client.messages.create({
+            from: process.env.TWILIO_WHATSAPP_NUMBER!,
+            to: `whatsapp:+${waConv.waId}`,
+            body: receiptMessage
           });
 
-          // Option A: Host PDF temporarily (best for production)
-          // You need a way to upload → e.g. to Render static folder, AWS S3, tmpfiles.org, etc.
-          // For now, placeholder: assume you have a function uploadPdf(buffer) → returns public URL
-          // const pdfUrl = await uploadPdfToPublic(pdfBuffer);
-
-          // Option B (sandbox/testing): Send text confirmation + reference
-          const receiptMessage = `🎉 Payment confirmed!\n\n` +
-            `Receipt for: ${payment.dueName}\n` +
-            `Amount: ₦${payment.amount.toLocaleString()}\n` +
-            `Payer: ${payment.payerName}\n` +
-            `Matric: ${payment.matricNumber}\n` +
-            `Reference: ${payment.reference}\n\n` +
-            `Full receipt coming soon!`;
-
-          await sendMessage(
-            `whatsapp:+${waConv.waId}`,
-            receiptMessage
-            // mediaUrl: [pdfUrl]  // ← enable when you have public URL
-          );
+          console.log(`Receipt text sent to ${waConv.waId}`);
 
           // Reset conversation
           waConv.currentStep = "idle";
@@ -130,9 +98,8 @@ await client.messages.create({
         }
       } catch (receiptErr: any) {
         console.error("Receipt send error:", receiptErr.message);
-        // Don't fail webhook — still 200
       }
-        }
+    }
   } catch (err: any) {
     console.error("❌ WEBHOOK ERROR:", err.message);
   }

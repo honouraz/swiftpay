@@ -136,8 +136,7 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
         }
 
         const priceKey = level;
-        const baseAmount = selectedDue.prices?.[priceKey] || 0;
-
+const baseAmount = (selectedDue.prices as Record<string, number>)?.[priceKey] || 0;
         if (baseAmount <= 0) {
           reply = "No price set for this level. Contact support.";
         } else {

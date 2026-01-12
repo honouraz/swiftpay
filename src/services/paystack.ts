@@ -8,11 +8,13 @@ const paystack = axios.create({
   },
 });
 
+export { paystack };  // ← This line was missing!
+
 // Initialize transaction
 export const initializePayment = async (email: string, amount: number) => {
   const response = await paystack.post("/transaction/initialize", {
     email,
-    amount: amount * 100, // Paystack uses kobo
+    amount: amount * 100,
   });
   return response.data;
 };
