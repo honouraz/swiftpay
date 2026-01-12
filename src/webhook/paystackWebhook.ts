@@ -76,12 +76,13 @@ try {
 
   if (waConv) {
     const receiptMessage = 
-      `🎉 PAYMENT CONFIRMED!\n\n` +
-`Receipt for: ${payment.dueName ?? "Dues Payment"}\n` +      `Amount: ₦${payment.amount.toLocaleString()}\n` +
-      `Payer: ${payment.payerName || "N/A"}\n` +
-      `Matric: ${payment.matricNumber || "N/A"}\n` +
-      `Reference: ${payment.reference}\n\n` +
-      `Thank you for using SwiftPay!`;
+  `🎉 PAYMENT CONFIRMED!\n\n` +
+  `Receipt for: ${payment.dueName ?? "Dues Payment"}\n` +  // ← use ?? (nullish coalescing)
+  `Amount: ₦${payment.amount?.toLocaleString() ?? "N/A"}\n` +
+  `Payer: ${payment.payerName ?? "N/A"}\n` +
+  `Matric: ${payment.matricNumber ?? "N/A"}\n` +
+  `Reference: ${payment.reference ?? "N/A"}\n\n` +
+  `Thank you for using SwiftPay!`;
 
     await client.messages.create({
       from: process.env.TWILIO_WHATSAPP_NUMBER!,
