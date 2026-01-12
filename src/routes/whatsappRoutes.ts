@@ -1,8 +1,8 @@
 // Assuming this is in src/routes/whatsappRoutes.ts
-import { Router } from 'express';
+import express from 'express';
 import { handleWhatsAppMessage } from '../controllers/whatsappController';
 
-const router = Router();
+const router = express.Router();
 
 // Use urlencoded parser JUST for this webhook route
 router.post('/webhook',

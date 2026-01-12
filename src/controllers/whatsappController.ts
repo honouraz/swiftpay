@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import twilio from "twilio";
-import Conversation from "../models/Conversation"; // Your model
+import Conversation from "../models/conversation"; // Your model
 import Due from "../models/Due"; // Assuming you have Due model
 
 const client = twilio(
