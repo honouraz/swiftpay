@@ -3,6 +3,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import axios from "axios";
+import crypto from "crypto";
 import { connectDB } from "./src/config/db";
 import userRoutes from "./src/routes/userRoutes";
 import paymentRoutes from "./src/routes/paymentRoutes";
@@ -28,7 +29,59 @@ app.post(
   (req: Request, res: Response) => paystackWebhook(req, res)
 );
 
+// Flutterwave Webhook
+app.post(
+  "/api/webhook/flutterwave",
+  express.raw({ type: "application/json" }),
+  async (req: Request, res: Response) => {
+    try {
+      const secret = process.env.FLUTTERWAVE_SECRET_KEY!;
+      const signature = req.headers["verif-hash"] as string;
 
+      // Flutterwave sends hash of payload + secret
+      const hash = crypto
+        .createHmac("sha256", secret)
+        .update(req.body.toString())
+        .digest("hex");
+
+      if (hash !== signature) {
+        console.log("❌ Invalid Flutterwave signature");
+        return res.sendStatus(401);
+      }
+
+      const event = JSON.parse(req.body.toString());
+
+      if (event.event === "charge.completed" && event.data.status === "successful") {
+        const tx = event.data;
+        const ref = tx.tx_ref;
+
+        // Find payment by reference
+        const payment = await Payment.findOne({ reference: ref });
+
+        if (payment) {
+          payment.status = "success";
+          payment.paidAt = new Date(tx.created_at);
+          payment.amount = tx.amount;
+
+          // Merge any extra meta
+          payment.metadata = { ...payment.metadata, flutterwave: tx };
+
+          await payment.save();
+
+          console.log("✅ FLUTTERWAVE PAYMENT SAVED:", ref);
+
+          // Optional: Send WhatsApp receipt if conversation exists (same logic as Paystack)
+          // ... copy from Paystack webhook if you want
+        }
+      }
+
+      res.sendStatus(200);
+    } catch (err: any) {
+      console.error("Flutterwave webhook error:", err.message);
+      res.sendStatus(200); // Always 200 to Flutterwave
+    }
+  }
+);
 
 app.use(cors({
   origin: "*", // Allow all for now — change to your frontend URL later

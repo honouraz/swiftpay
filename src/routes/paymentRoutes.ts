@@ -17,6 +17,8 @@ const router = express.Router();
 router.post("/paystack/initialize", initializePayment);
 router.get("/paystack/verify/:reference", verifyPayment);
 
+router.post("/flutterwave/initialize", initializePayment);
+router.get("/flutterwave/verify/:reference", verifyPayment);
 
 // ----- RECEIPT -----
 router.get("/receipt/:reference", generateReceipt);

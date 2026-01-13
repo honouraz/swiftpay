@@ -5,6 +5,7 @@ import axios from "axios";
 import { Request, Response } from "express";
 import Due from "../models/Due";
 import Payment from "../models/Payment";
+import { initializeFlutterwave } from "../services/flutterwave";
 
 /* =====================================================
    PAYSTACK — INITIALIZE PAYMENT
@@ -16,7 +17,7 @@ export const initializePayment = async (
   console.log("INIT BODY:", req.body);
 
   try {
-    const { email, dueId, level, name, matric, department, phone } = req.body;
+    const { email, dueId, level, name, matric, department, phone, gateway = "flutterwave" } = req.body;
 
     if (!email || !dueId || !level) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -27,28 +28,21 @@ export const initializePayment = async (
       return res.status(404).json({ message: "Due not found" });
     }
 
-    // ✅ FIX #1 — Convert prices to plain object
-const prices =
-  typeof (due.prices as any)?.toObject === "function"
-    ? (due.prices as any).toObject()
-    : (due.prices as any);
-    // ✅ FIX #2 — Ensure level key is a string and trimmed
+    const prices = typeof (due.prices as any)?.toObject === "function"
+      ? (due.prices as any).toObject()
+      : (due.prices as any);
+
     const levelKey = String(level).trim();
-const baseAmount =
-  prices instanceof Map ? prices.get(levelKey) : (prices as any)[levelKey];
+    const baseAmount = prices instanceof Map ? prices.get(levelKey) : (prices as any)[levelKey];
 
-
-    // ✅ STRONG VALIDATION
     if (typeof baseAmount !== "number" || baseAmount <= 0) {
       return res.status(400).json({
         message: `Invalid amount for level "${levelKey}" in due "${due.name}"`,
-availableLevels:
-  prices instanceof Map ? Array.from(prices.keys()) : Object.keys(prices),
+        availableLevels: prices instanceof Map ? Array.from(prices.keys()) : Object.keys(prices),
       });
     }
 
     const extraCharge = due.extraCharge || 0;
-
     let platformCommission = 0;
     if (extraCharge === 0) {
       const platformFeePercent = due.platformFeePercent || 7;
@@ -68,26 +62,54 @@ availableLevels:
       baseAmount,
       platformCommission,
       extraCharge,
+      gateway,
     };
 
-    const paystackRes = await axios.post(
-  "https://api.paystack.co/transaction/initialize",
-  {
-    email,
-    amount: Math.round(totalAmount * 100),
-    metadata,
-    callback_url: `${process.env.FRONTEND_URL}/payment-success`,  // ← THIS ONE!
-  },
-  {
-    headers: {
-      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      "Content-Type": "application/json",
-    },
-  }
-);
+    let paymentUrl: string;
+    const reference = `SWIFT_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    if (gateway === "flutterwave") {
+      const flwPayload = {
+        tx_ref: reference,
+        amount: totalAmount,
+        currency: "NGN",
+        redirect_url: `${process.env.FRONTEND_URL}/payment-success`,
+        customer: {
+          email,
+          name,
+          phone_number: phone,
+        },
+        customizations: {
+          title: `SwiftPay - ${due.name}`,
+          description: `Payment for ${due.name} - Level ${level}`,
+        },
+        meta: metadata,
+      };
+
+      const flwRes = await initializeFlutterwave(flwPayload);
+      paymentUrl = flwRes.data.link;
+    } else {
+      // Fallback to Paystack (old code)
+      const paystackRes = await axios.post(
+        "https://api.paystack.co/transaction/initialize",
+        {
+          email,
+          amount: Math.round(totalAmount * 100),
+          metadata,
+          callback_url: `${process.env.FRONTEND_URL}/payment-success`,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      paymentUrl = paystackRes.data.data.authorization_url;
+    }
 
     const payment = new Payment({
-      reference: paystackRes.data.data.reference,
+      reference,
       amount: totalAmount,
       email,
       status: "pending",
@@ -97,7 +119,7 @@ availableLevels:
 
     await payment.save();
 
-    res.json(paystackRes.data);
+    res.json({ status: "success", paymentUrl, reference });
   } catch (err: any) {
     console.error("INIT ERROR:", err);
     res.status(500).json({ message: "Payment initialization failed" });

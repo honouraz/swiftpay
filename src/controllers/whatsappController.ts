@@ -211,7 +211,7 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
     await conv.save();
 
     if (reply) {
-      // await sendMessage(from, reply);
+       await sendMessage(from, reply);
     }
 
     res.sendStatus(200);
