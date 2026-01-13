@@ -118,7 +118,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
     doc.fontSize(40).text(`₦${(payment.baseAmount || 0).toLocaleString()}`, 90, boxY + 50); // ₦ big & correct
 
     // QR Code bottom right
-    const verifyUrl = `https://swiftpay.com/verify/${payment.reference}`;
+    const verifyUrl = `https://swiftpaybyhon.vercel.app/verify/${payment.reference}`;
     const qrData = await QRCode.toDataURL(verifyUrl);
     const qrBuffer = Buffer.from(qrData.split(",")[1], "base64");
     doc.image(qrBuffer, doc.page.width - 150, doc.page.height - 180, { width: 110 });
