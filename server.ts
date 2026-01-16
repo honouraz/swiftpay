@@ -38,7 +38,6 @@ app.post(
       const secret = process.env.FLUTTERWAVE_SECRET_KEY!;
       const signature = req.headers["verif-hash"] as string;
 
-      // Flutterwave sends hash of payload + secret
       const hash = crypto
         .createHmac("sha256", secret)
         .update(req.body.toString())
@@ -51,34 +50,43 @@ app.post(
 
       const event = JSON.parse(req.body.toString());
 
+      console.log("FLUTTERWAVE EVENT:", event); // ← Add this for debug
+
       if (event.event === "charge.completed" && event.data.status === "successful") {
         const tx = event.data;
         const ref = tx.tx_ref;
 
-        // Find payment by reference
         const payment = await Payment.findOne({ reference: ref });
 
         if (payment) {
           payment.status = "success";
-          payment.paidAt = new Date(tx.created_at);
+          payment.paidAt = new Date(tx.created_at || Date.now());
           payment.amount = tx.amount;
 
-          // Merge any extra meta
-          payment.metadata = { ...payment.metadata, flutterwave: tx };
+          // Merge Flutterwave-specific data
+          payment.metadata = {
+            ...payment.metadata,
+            flutterwave: {
+              transaction_id: tx.id,
+              flw_ref: tx.flw_ref,
+              payment_type: tx.payment_type,
+            }
+          };
 
           await payment.save();
 
-          console.log("✅ FLUTTERWAVE PAYMENT SAVED:", ref);
+          console.log("✅ FLUTTERWAVE PAYMENT UPDATED TO SUCCESS:", ref);
 
-          // Optional: Send WhatsApp receipt if conversation exists (same logic as Paystack)
-          // ... copy from Paystack webhook if you want
+          // Optional: Send WhatsApp receipt (copy from Paystack if needed)
+        } else {
+          console.log("No payment found for ref:", ref);
         }
       }
 
       res.sendStatus(200);
     } catch (err: any) {
       console.error("Flutterwave webhook error:", err.message);
-      res.sendStatus(200); // Always 200 to Flutterwave
+      res.sendStatus(200);
     }
   }
 );
