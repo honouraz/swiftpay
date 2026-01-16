@@ -2,6 +2,7 @@ import { Response, Request } from "express";
 import { AuthRequest } from "../types/AuthRequest";
 import SubAdmin from "../models/SubAdmin";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import Payment from "../models/Payment";
 
 export const createSubAdmin = async (req: AuthRequest, res: Response) => {
@@ -87,5 +88,46 @@ export const getSubAdminPayments = async (req: AuthRequest, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const loginSubAdmin = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    const subAdmin = await SubAdmin.findOne({ email: email.toLowerCase() }).select("+password");
+    if (!subAdmin) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const match = await bcrypt.compare(password, subAdmin.password);
+    if (!match) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Safe token generation
+    const token = jwt.sign(
+      { 
+        id: subAdmin._id.toString(), 
+        role: "subadmin" as const,  // force literal type
+        association: subAdmin.association ?? "GENERAL"  // fallback if undefined
+      },
+      process.env.JWT_SECRET!,
+      { expiresIn: "30d" }
+    );
+
+    res.json({
+      message: "Subadmin login successful",
+      token,
+      user: {
+        _id: subAdmin._id,
+        name: subAdmin.name,
+        email: subAdmin.email,
+        role: "subadmin",
+        association: subAdmin.association ?? "GENERAL",
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
   }
 };

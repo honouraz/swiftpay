@@ -32,16 +32,20 @@ app.post(
 // Flutterwave Webhook
 app.post(
   "/api/webhook/flutterwave",
-  express.raw({ type: "application/json" }),
+  express.raw({ type: "*/*" }), // ← Use * /* to catch any content-type
   async (req: Request, res: Response) => {
     try {
       const secret = process.env.FLUTTERWAVE_SECRET_KEY!;
       const signature = req.headers["verif-hash"] as string;
 
+      // Use raw buffer directly (most reliable)
       const hash = crypto
         .createHmac("sha256", secret)
-        .update(req.body.toString())
+        .update(req.body) // ← Buffer, not .toString()
         .digest("hex");
+
+      console.log("Received verif-hash:", signature);
+      console.log("Computed hash:", hash);
 
       if (hash !== signature) {
         console.log("❌ Invalid Flutterwave signature");
@@ -50,9 +54,9 @@ app.post(
 
       const event = JSON.parse(req.body.toString());
 
-      console.log("FLUTTERWAVE EVENT:", event); // ← Add this for debug
+      console.log("FLUTTERWAVE EVENT RECEIVED:", event.event, event.data?.status);
 
-      if (event.event === "charge.completed" && event.data.status === "successful") {
+      if (event.event === "charge.completed" && event.data?.status === "successful") {
         const tx = event.data;
         const ref = tx.tx_ref;
 
@@ -63,11 +67,10 @@ app.post(
           payment.paidAt = new Date(tx.created_at || Date.now());
           payment.amount = tx.amount;
 
-          // Merge Flutterwave-specific data
           payment.metadata = {
             ...payment.metadata,
             flutterwave: {
-              transaction_id: tx.id,
+              id: tx.id,
               flw_ref: tx.flw_ref,
               payment_type: tx.payment_type,
             }
@@ -76,10 +79,8 @@ app.post(
           await payment.save();
 
           console.log("✅ FLUTTERWAVE PAYMENT UPDATED TO SUCCESS:", ref);
-
-          // Optional: Send WhatsApp receipt (copy from Paystack if needed)
         } else {
-          console.log("No payment found for ref:", ref);
+          console.log("Payment not found for ref:", ref);
         }
       }
 

@@ -4,6 +4,7 @@ import {
   getSubAdmins,
   createSubAdmin,
   getSubAdminPayments,
+  loginSubAdmin,
 } from "../controllers/subAdminController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { isSuperAdmin } from "../middlewares/isSuperAdmin";
@@ -12,7 +13,7 @@ const router = express.Router();
 
 // create subadmin
 router.post("/create", authMiddleware, isSuperAdmin, createSubAdmin);
-
+router.post("/login", loginSubAdmin);
 // list subadmins
 router.get("/", authMiddleware, isSuperAdmin, getSubAdmins);
 
