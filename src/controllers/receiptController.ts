@@ -34,7 +34,8 @@ export const generateReceipt = async (req: Request, res: Response) => {
     const matric = meta.matricNumber || "Unknown";
     const cleanName = payerName.replace(/[^a-zA-Z0-9]/g, "_");
     const cleanMatric = matric.replace(/[^a-zA-Z0-9]/g, "_");
-    const filename = `${cleanName}_${cleanMatric}.pdf`;
+    const cleandueName = dueName.replace(/[^a-zA-Z0-9]/g, "_");
+    const filename = `${cleandueName}_${cleanName}_${cleanMatric}.pdf`;
 
     const doc = new PDFDocument({ size: "A4", margin: 40 });
     res.setHeader("Content-Type", "application/pdf");
@@ -58,6 +59,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
     else if (lowerDue.includes("sug")) headerColor = "#4CAF50";
     else if (lowerDue.includes("esan")) headerColor = "#FF5722";
     else if (lowerDue.includes("sossa")) headerColor = "#9C27B0";
+    else if (lowerDue.includes("idowu")) headerColor = "#20ef12ff";
 
     // Header Bar — full width
     doc.rect(0, 0, doc.page.width, 140).fill(headerColor);
@@ -82,6 +84,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
     let assocLogoPath = path.join(__dirname, "../../public/nass.png");
     if (lowerDue.includes("nass")) assocLogoPath = path.join(__dirname, "../../public/nass.png");
     else if (lowerDue.includes("sug")) assocLogoPath = path.join(__dirname, "../../public/sug.png");
+    else if (lowerDue.includes("idowu")) assocLogoPath = path.join(__dirname, "../../public/sug.png");
 
     if (fs.existsSync(assocLogoPath)) {
       doc.image(assocLogoPath, doc.page.width - 180, 20, { width: 140 }); // Far right, safe
@@ -89,7 +92,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
 
     // Fields — start lower, spread to fill page
     let y = 200;
-    const field = (label: string, value: string) => {
+    const field = (label: string, value: string, p0?: string) => {
       doc.fillColor("black").fontSize(16).font("Helvetica-Bold")
          .text(label + ":", 70, y);
       doc.fontSize(16).font("Helvetica")
@@ -103,6 +106,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
     field("Phone", meta.phone || "N/A");
     field("Payment For", dueName);
     field("Reference", payment.reference);
+    field("Status", payment.status === "success" ? "Successful" : "Pending" , "Failed" );
     field("Date", new Date(payment.paidAt || Date.now())
                     .toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })
                     .replace(",", ""));
