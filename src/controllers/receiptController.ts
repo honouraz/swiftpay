@@ -106,8 +106,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
     field("Phone", meta.phone || "N/A");
     field("Payment For", dueName);
     field("Reference", payment.reference);
-    field("Amount", payment.baseAmount ? `₦${(payment.baseAmount).toLocaleString()}` : "N/A");
-    field("Status", payment.status === "success" ? "Successful" : "Pending");
+field("Amount", `₦${payment.baseAmount.toLocaleString()}`);    field("Status", payment.status === "success" ? "Successful" : "Pending");
     field("Date", new Date(payment.paidAt || Date.now())
                     .toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })
                     .replace(",", ""));
