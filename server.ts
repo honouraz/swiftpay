@@ -63,23 +63,34 @@ app.post(
         const payment = await Payment.findOne({ reference: ref });
 
         if (payment) {
-          payment.status = "success";
-          payment.paidAt = new Date(tx.created_at || Date.now());
-          payment.amount = tx.amount;
+  payment.status = "success";
+  payment.paidAt = new Date(tx.created_at || Date.now());
+  payment.amount = tx.amount;
 
-          payment.metadata = {
-            ...payment.metadata,
-            flutterwave: {
-              id: tx.id,
-              flw_ref: tx.flw_ref,
-              payment_type: tx.payment_type,
-            }
-          };
+  // Restore breakdown from metadata if overwritten/missing
+  if (!payment.baseAmount && payment.metadata?.baseAmount) {
+    payment.baseAmount = Number(payment.metadata.baseAmount);
+  }
+  if (!payment.platformCommission && payment.metadata?.platformCommission) {
+    payment.platformCommission = Number(payment.metadata.platformCommission);
+  }
+  if (!payment.extraCharge && payment.metadata?.extraCharge) {
+    payment.extraCharge = Number(payment.metadata.extraCharge);
+  }
 
-          await payment.save();
+  payment.metadata = {
+    ...payment.metadata,
+    flutterwave: {
+      id: tx.id,
+      flw_ref: tx.flw_ref,
+      payment_type: tx.payment_type,
+    }
+  };
 
-          console.log("✅ FLUTTERWAVE PAYMENT UPDATED TO SUCCESS:", ref);
-        } else {
+  await payment.save();
+
+  console.log("✅ FLUTTERWAVE PAYMENT UPDATED:", ref, "Base restored:", payment.baseAmount);
+} else {
           console.log("Payment not found for ref:", ref);
         }
       }
