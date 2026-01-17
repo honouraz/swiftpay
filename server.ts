@@ -35,7 +35,7 @@ app.post(
   express.raw({ type: "*/*" }), // ← Use * /* to catch any content-type
   async (req: Request, res: Response) => {
     try {
-      const secret = process.env.FLUTTERWAVE_SECRET_KEY!;
+      const secret = process.env.FLUTTERWAVE_WEBHOOK_SECRET!;
       const signature = req.headers["verif-hash"] as string;
 
       // Use raw buffer directly (most reliable)
