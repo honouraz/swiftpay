@@ -82,14 +82,23 @@ export const getSubAdminPayments = async (req: AuthRequest, res: Response) => {
 
     // Match payments by dueName or metadata.dueName (case-insensitive)
     const payments = await Payment.find({
-      $or: [
-        { dueName: { $regex: new RegExp(subadmin.association, "i") } },
-        { "metadata.dueName": { $regex: new RegExp(subadmin.association, "i") } },
-      ],
-      status: "success",
-    }).sort({ paidAt: -1 });
+  status: "success",
+  $or: [
+    { dueName: { $regex: escapeRegex(subadmin.association), $options: "i" } },
+    { "metadata.dueName": { $regex: escapeRegex(subadmin.association), $options: "i" } },
+    { "metadata.dueName": subadmin.association }, // exact match fallback
+  ]
+}).sort({ paidAt: -1 });
+
+// Helper to escape special regex chars
+function escapeRegex(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
     console.log(`Subadmin ${subadmin.email} fetched ${payments.length} payments for association: ${subadmin.association}`);
+console.log("Searching for association:", subadmin.association);
+console.log("All payments count:", await Payment.countDocuments({ status: "success" }));
+console.log("Matching payments:", payments.length);
 
     res.json(payments);
   } catch (err: any) {
