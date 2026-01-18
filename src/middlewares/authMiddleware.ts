@@ -1,6 +1,8 @@
+// src/middlewares/authMiddleware.ts
 import { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
+import SubAdmin from "../models/SubAdmin";
 import { AuthRequest } from "../types/AuthRequest";
 
 interface JwtPayload {
@@ -27,19 +29,25 @@ export const authMiddleware = async (
       process.env.JWT_SECRET as string
     ) as JwtPayload;
 
-    const user = await User.findById(decoded.id).select(
-      "email role association"
-    );
+    let authenticatedUser;
 
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
+    // First try User model (normal users + superadmins)
+    authenticatedUser = await User.findById(decoded.id).select("email role association");
+
+    // If not found in User, try SubAdmin model
+    if (!authenticatedUser) {
+      authenticatedUser = await SubAdmin.findById(decoded.id).select("email role association");
+    }
+
+    if (!authenticatedUser) {
+      return res.status(401).json({ message: "User/Subadmin not found" });
     }
 
     req.user = {
       id: decoded.id,
-      role: user.role || "user",
-      email: user.email,
-      association: user.association,
+      role: authenticatedUser.role || "user",
+      email: authenticatedUser.email,
+      association: authenticatedUser.association,
     };
 
     next();
