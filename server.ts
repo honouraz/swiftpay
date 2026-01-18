@@ -32,16 +32,18 @@ app.post(
 // Flutterwave Webhook
 app.post(
   "/api/webhook/flutterwave",
-  express.raw({ type: "*/*" }), // ← Use * /* to catch any content-type
+  express.raw({ type: "*/*" }),
   async (req: Request, res: Response) => {
     try {
+      console.log("RAW BODY LENGTH:", req.body.length);
+      console.log("RAW BODY START:", req.body.toString("utf8").slice(0, 100) + "...");
+
       const secret = process.env.FLUTTERWAVE_WEBHOOK_SECRET!;
       const signature = req.headers["verif-hash"] as string;
 
-      // Use raw buffer directly (most reliable)
       const hash = crypto
         .createHmac("sha256", secret)
-        .update(req.body) // ← Buffer, not .toString()
+        .update(req.body)
         .digest("hex");
 
       console.log("Received verif-hash:", signature);
@@ -49,6 +51,7 @@ app.post(
 
       if (hash !== signature) {
         console.log("❌ Invalid Flutterwave signature");
+        console.log("Secret used:", secret); // ← TEMP DEBUG (remove later)
         return res.sendStatus(401);
       }
 
