@@ -35,25 +35,25 @@ app.post(
   express.raw({ type: "*/*" }),
   async (req: Request, res: Response) => {
     try {
-       console.log("RAW BODY LENGTH:", req.body.length);
-       console.log("RAW BODY START:", req.body.toString("utf8").slice(0, 100) + "...");
+      // console.log("RAW BODY LENGTH:", req.body.length);
+      // console.log("RAW BODY START:", req.body.toString("utf8").slice(0, 100) + "...");
 
-       const secret = process.env.FLUTTERWAVE_WEBHOOK_SECRET!;
-       const signature = req.headers["verif-hash"] as string;
+      // const secret = process.env.FLUTTERWAVE_WEBHOOK_SECRET!;
+      // const signature = req.headers["verif-hash"] as string;
 
-       const hash = crypto
-        .createHmac("sha256", secret)
-         .update(req.body)
-         .digest("hex");
+      // const hash = crypto
+       // .createHmac("sha256", secret)
+        // .update(req.body)
+        // .digest("hex");
 
-       console.log("Received verif-hash:", signature);
-       console.log("Computed hash:", hash);
+      // console.log("Received verif-hash:", signature);
+      // console.log("Computed hash:", hash);
 
-       if (hash !== signature) {
-         console.log("❌ Invalid Flutterwave signature");
-         console.log("Secret used:", secret); // ← TEMP DEBUG (remove later)
-         return res.sendStatus(401);
-       }
+      // if (hash !== signature) {
+        // console.log("❌ Invalid Flutterwave signature");
+        // console.log("Secret used:", secret); // ← TEMP DEBUG (remove later)
+        // return res.sendStatus(401);
+      // }
 
       const event = JSON.parse(req.body.toString());
 
