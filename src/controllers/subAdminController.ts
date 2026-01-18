@@ -74,19 +74,26 @@ export const getSubAdmins = async (req: Request, res: Response) => {
 };
 export const getSubAdminPayments = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
     const subadminId = req.user.id;
     const subadmin = await SubAdmin.findById(subadminId);
     if (!subadmin) return res.status(404).json({ message: "Subadmin not found" });
 
-    const payments = await Payment.find({ association: subadmin.association, status: "success" })
-      .sort({ paidAt: -1 });
+    // Match payments by dueName or metadata.dueName (case-insensitive)
+    const payments = await Payment.find({
+      $or: [
+        { dueName: { $regex: new RegExp(subadmin.association, "i") } },
+        { "metadata.dueName": { $regex: new RegExp(subadmin.association, "i") } },
+      ],
+      status: "success",
+    }).sort({ paidAt: -1 });
+
+    console.log(`Subadmin ${subadmin.email} fetched ${payments.length} payments for association: ${subadmin.association}`);
 
     res.json(payments);
-  } catch (err) {
-    console.error(err);
+  } catch (err: any) {
+    console.error("Payments fetch error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
