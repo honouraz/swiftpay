@@ -14,27 +14,29 @@ export interface IDue extends Document {
   platformFeePercent: number;
 }
 
-const DueSchema = new Schema(
-  {
-    name: { type: String, required: true, unique: true },
-    description: { type: String, required: true },
-    prices: {
-      type: Map,
-      of: Number,
-      default: {
-        "100": 0,
-        "200": 0,
-        "300": 0,
-        "400": 0,
-        "500": 0,
-      },
+const DueSchema = new Schema({
+  name: { type: String, required: true, unique: true },
+  description: { type: String, required: true },
+  prices: {
+    type: Map,
+    of: Number,
+    default: {
+      "100": 0,
+      "200": 0,
+      "300": 0,
+      "400": 0,
+      "500": 0,
     },
-    extraCharge: { type: Number, default: 0 },
-    platformFeePercent: { type: Number, default: 7 },
   },
-  { timestamps: true }
-);
+  extraCharge: { type: Number, default: 0 },
+  platformFeePercent: { type: Number, default: 7 },
+  // NEW FIELD — PASTE THIS
+  flutterwaveSubaccountId: {
+    type: String,
+    required: false,
+  },
+}, { timestamps: true });
 
 DueSchema.index({ name: 1 });
 
-export default mongoose.model<IDue>("Due", DueSchema);
+export default mongoose.model("Due", DueSchema);

@@ -84,6 +84,15 @@ export const initializePayment = async (
           description: `Payment for ${due.name} - Level ${level}`,
         },
         meta: metadata,
+        
+        // NEW: Subaccount split (only if ID exists)
+  subaccounts: due.flutterwaveSubaccountId ? [
+    {
+      id: due.flutterwaveSubaccountId,
+      transaction_charge_type: "percentage",
+      transaction_charge: 93.46  // Association gets ~93.46% = full base after 1.4% fee
+    }
+  ] : []
       };
 
       const flwRes = await initializeFlutterwave(flwPayload);
