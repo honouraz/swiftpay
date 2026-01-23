@@ -30,46 +30,40 @@ app.post(
 );
 
 // Flutterwave Webhook
-// Flutterwave Webhook with decryption for new accounts
+// Flutterwave Webhook
 app.post(
   "/api/webhook/flutterwave",
   express.raw({ type: "*/*" }),
   async (req: Request, res: Response) => {
     try {
       const rawBody = req.body.toString();
-      console.log("RAW ENCRYPTED BODY:", rawBody); // Go show gibberish if encrypted
 
-      let event;
+      // TEMP DEBUG LOGS (remove later if you want)
+      console.log("FLUTTERWAVE RAW BODY:", rawBody);
 
-      // If body looks encrypted (not valid JSON with {), decrypt it
-      if (rawBody && rawBody.length > 0 && rawBody[0] !== "{") {
-        const secret = process.env.FLUTTERWAVE_SECRET_KEY!; // Your main secret key
+      let decryptedBody = rawBody;
 
-        // Decrypt (Flutterwave uses Triple DES)
+      // Decrypt if encrypted (new accounts send base64 encrypted)
+      if (rawBody && rawBody.length > 0 && rawBody[0] !== "{" && rawBody[0] !== "[") {
+        const secret = process.env.FLUTTERWAVE_SECRET_KEY!;
+
         const md5Key = crypto.createHash("md5").update(secret).digest();
         const tripleDesKey = Buffer.concat([md5Key, md5Key.slice(0, 8)]);
 
         const decipher = crypto.createDecipheriv("des-ede3", tripleDesKey, "");
-        let decrypted = decipher.update(rawBody, "base64", "utf8");
-        decrypted += decipher.final("utf8");
+        decryptedBody = decipher.update(rawBody, "base64", "utf8");
+        decryptedBody += decipher.final("utf8");
 
-        console.log("DECRYPTED BODY:", decrypted);
-
-        event = JSON.parse(decrypted);
-      } else {
-        // Old plain JSON
-        event = JSON.parse(rawBody);
+        console.log("DECRYPTED BODY:", decryptedBody);
       }
 
-      console.log("FINAL EVENT:", event.event || event.type, event.data?.status || event.status);
+      const event = JSON.parse(decryptedBody);
 
-      const isSuccess = 
-        (event.event === "charge.completed" && event.data?.status === "successful") ||
-        (event.type === "CHARGE.COMPLETED" && event.data?.status === "successful");
+      console.log("FLUTTERWAVE EVENT RECEIVED:", event.event, event.data?.status);
 
-      if (isSuccess) {
-        const tx = event.data || event;
-        const ref = tx.tx_ref || tx.reference;
+      if (event.event === "charge.completed" && event.data?.status === "successful") {
+        const tx = event.data;
+        const ref = tx.tx_ref;
 
         const payment = await Payment.findOne({ reference: ref });
 
@@ -78,22 +72,37 @@ app.post(
           payment.paidAt = new Date(tx.created_at || Date.now());
           payment.amount = tx.amount;
 
-          // Restore baseAmount etc.
-          payment.baseAmount = payment.baseAmount || Number(payment.metadata?.baseAmount || 0);
-          payment.platformCommission = payment.platformCommission || Number(payment.metadata?.platformCommission || 0);
-          payment.extraCharge = payment.extraCharge || Number(payment.metadata?.extraCharge || 0);
+          // Restore breakdown from metadata if overwritten/missing
+          if (!payment.baseAmount && payment.metadata?.baseAmount) {
+            payment.baseAmount = Number(payment.metadata.baseAmount);
+          }
+          if (!payment.platformCommission && payment.metadata?.platformCommission) {
+            payment.platformCommission = Number(payment.metadata.platformCommission);
+          }
+          if (!payment.extraCharge && payment.metadata?.extraCharge) {
+            payment.extraCharge = Number(payment.metadata.extraCharge);
+          }
 
-          payment.metadata = { ...payment.metadata, flutterwave: tx };
+          payment.metadata = {
+            ...payment.metadata,
+            flutterwave: {
+              id: tx.id,
+              flw_ref: tx.flw_ref,
+              payment_type: tx.payment_type,
+            }
+          };
 
           await payment.save();
 
-          console.log("✅ SUCCESS (NEW ACCOUNT DECRYPTED):", ref);
+          console.log("✅ FLUTTERWAVE PAYMENT UPDATED:", ref, "Base restored:", payment.baseAmount);
+        } else {
+          console.log("Payment not found for ref:", ref);
         }
       }
 
       res.sendStatus(200);
     } catch (err: any) {
-      console.error("Webhook error:", err.message);
+      console.error("Flutterwave webhook error:", err.message);
       res.sendStatus(200);
     }
   }
