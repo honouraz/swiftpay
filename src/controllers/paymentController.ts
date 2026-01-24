@@ -68,53 +68,41 @@ export const initializePayment = async (
     let paymentUrl: string;
     const reference = `SWIFT_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 if (gateway === "flutterwave") {
-  // Smart subaccount split: Association gets EXACT base amount after Flutterwave 1.4% fee
+// Smart subaccount split: Association gets EXACTLY base amount using FLAT charge
 let subaccounts: any[] = []; // empty by default
 
 if (due.flutterwaveSubaccountId) {
-  const originalBaseAmount = baseAmount; // Use trusted DB value (or req.body.baseAmount if you prefer)
+  const originalBaseAmount = baseAmount; // trusted from DB (or req.body.baseAmount)
   const studentTotalPay = totalAmount;
 
-  if (originalBaseAmount > 0 && studentTotalPay > originalBaseAmount) {
-    const flutterwaveFeeRate = 1.4 / 100; // 0.014
-
-    // Step 1: Calculate exact amount association should receive (base amount in kobo)
+  if (originalBaseAmount > 0 && studentTotalPay >= originalBaseAmount) {
+    // Association gets exactly the base amount (in kobo)
     const associationKobo = Math.round(originalBaseAmount * 100);
 
-    // Step 2: Calculate the MAXIMUM amount Flutterwave can charge subaccount (in kobo)
+    // You (platform) get everything else (in kobo)
     const totalKobo = Math.round(studentTotalPay * 100);
-    const flwFeeKobo = Math.round(totalKobo * flutterwaveFeeRate);
-    const maxSubaccountChargeKobo = totalKobo - flwFeeKobo;
+    const platformKobo = totalKobo - associationKobo;
 
-    // Step 3: Calculate percentage so subaccount charge is safe (round DOWN)
-    let associationSharePercent = (associationKobo / totalKobo) * 100;
+    // Safety: If platformKobo is negative (impossible normally), set to 0
+    const safePlatformKobo = Math.max(platformKobo, 0);
 
-    // Aggressive safety: reduce by 0.01% – 0.05% and round down to 2 decimals
-    associationSharePercent = associationSharePercent - 0.05;
-    associationSharePercent = Math.floor(associationSharePercent * 100) / 100; // round down safely
-
-    // Never go above 99.99 or below 0
-    associationSharePercent = Math.min(associationSharePercent, 99.99);
-    associationSharePercent = Math.max(associationSharePercent, 0);
-
-    console.log("SAFE Split Calc:", {
-      originalBase: originalBaseAmount,
+    console.log("FLAT Split Calc:", {
+      baseAmount: originalBaseAmount,
       totalPay: studentTotalPay,
-      associationKobo,
-      maxSubaccountChargeKobo,
-      assocPercent: associationSharePercent.toFixed(4),
-      finalCharge: associationSharePercent.toFixed(2)
+      associationGets: originalBaseAmount,
+      platformGets: safePlatformKobo / 100,
+      platformKobo: safePlatformKobo
     });
 
     subaccounts = [
       {
         id: due.flutterwaveSubaccountId,
-        transaction_charge_type: "percentage",
-        transaction_charge: associationSharePercent.toFixed(2)
+        transaction_charge_type: "flat",
+        transaction_charge: safePlatformKobo  // THIS IS IN KOBO – what YOU take
       }
     ];
   } else {
-    console.warn("Invalid baseAmount or calculation skipped – no split applied");
+    console.warn("Invalid baseAmount or calculation skipped – no split");
   }
 }
 
