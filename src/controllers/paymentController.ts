@@ -67,37 +67,60 @@ export const initializePayment = async (
 
     let paymentUrl: string;
     const reference = `SWIFT_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+if (gateway === "flutterwave") {
+  // Smart subaccount split: Association gets EXACT base amount after Flutterwave 1.4% fee
+  let subaccounts: any[] = []; // empty by default
 
-    if (gateway === "flutterwave") {
-      const flwPayload = {
-        tx_ref: reference,
-        amount: totalAmount,
-        currency: "NGN",
-        redirect_url: `${process.env.FRONTEND_URL}/payment-success`,
-        customer: {
-          email,
-          name,
-          phone_number: phone,
-        },
-        customizations: {
-          title: `SwiftPay - ${due.name}`,
-          description: `Payment for ${due.name} - Level ${level}`,
-        },
-        meta: metadata,
-        
-        // NEW: Subaccount split (only if ID exists)
-  subaccounts: due.flutterwaveSubaccountId ? [
-    {
-      id: due.flutterwaveSubaccountId,
-      transaction_charge_type: "percentage",
-      transaction_charge: 93.46  // Association gets ~93.46% = full base after 1.4% fee
-    }
-  ] : []
-      };
+  if (due.flutterwaveSubaccountId && req.body.baseAmount) {
+    const originalBaseAmount = baseAmount;
+    const studentTotalPay = totalAmount; // already calculated (base + platform fee/extra)
 
-      const flwRes = await initializeFlutterwave(flwPayload);
-      paymentUrl = flwRes.data.link;
+    if (originalBaseAmount > 0 && studentTotalPay > originalBaseAmount) {
+      const flutterwaveFeeRate = 1.4 / 100; // 0.014
+      const amountAfterFlutterwaveFee = studentTotalPay * (1 - flutterwaveFeeRate);
+
+      const associationSharePercent = (originalBaseAmount / amountAfterFlutterwaveFee) * 100;
+
+      console.log("Split Calc:", {
+  originalBase: originalBaseAmount,
+  totalPay: studentTotalPay,
+  afterFee: amountAfterFlutterwaveFee,
+  assocPercent: associationSharePercent.toFixed(2)
+});
+      subaccounts = [
+        {
+          id: due.flutterwaveSubaccountId,
+          transaction_charge_type: "percentage",
+          transaction_charge: associationSharePercent.toFixed(2)
+        }
+      ];
     } else {
+      console.warn("Invalid baseAmount received or calculation skipped");
+    }
+  }
+
+  const flwPayload = {
+    tx_ref: reference,
+    amount: totalAmount,
+    currency: "NGN",
+    redirect_url: `${process.env.FRONTEND_URL}/payment-success`,
+    customer: {
+      email,
+      name,
+      phone_number: phone,
+    },
+    customizations: {
+      title: `SwiftPay - ${due.name}`,
+      description: `Payment for ${due.name} - Level ${level}`,
+    },
+    meta: metadata,
+    subaccounts: subaccounts  // ← Use the variable
+  };
+
+  const flwRes = await initializeFlutterwave(flwPayload);
+  paymentUrl = flwRes.data.link;
+}
+else {
       // Fallback to Paystack (old code)
       const paystackRes = await axios.post(
         "https://api.paystack.co/transaction/initialize",
