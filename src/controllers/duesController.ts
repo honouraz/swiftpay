@@ -19,6 +19,7 @@ export const createDue = async (req: Request, res: Response) => {
       prices,
       extraCharge = 0,
       platformFeePercent = 7,
+      flutterwaveSubaccountId = ""
     } = req.body;
 
     // FIX: If extraCharge > 0, set platformFeePercent to 0
@@ -30,6 +31,7 @@ export const createDue = async (req: Request, res: Response) => {
       prices,
       extraCharge,
       platformFeePercent: finalPercent,
+      flutterwaveSubaccountId,
     });
 
     res.status(201).json(due);
@@ -41,15 +43,23 @@ export const createDue = async (req: Request, res: Response) => {
 export const updateDue = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, description, prices, extraCharge = 0, platformFeePercent = 7 } = req.body;
+    const { name, 
+      description, 
+      prices, 
+      extraCharge = 0,
+       platformFeePercent = 7,
+      flutterwaveSubaccountId = "",
+     } = req.body;
 
     // FIX: If extraCharge > 0, set platformFeePercent to 0
     const finalPercent = extraCharge > 0 ? 0 : platformFeePercent;
 
     const due = await Due.findByIdAndUpdate(
       id,
-      { name, description, prices, extraCharge, platformFeePercent: finalPercent },
-      { new: true }
+      { name, description, prices, extraCharge, platformFeePercent: finalPercent,
+        flutterwaveSubaccountId,
+       },
+      { new: true, runValidators: true }
     );
 
     if (!due) {
