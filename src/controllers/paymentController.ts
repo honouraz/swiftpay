@@ -68,44 +68,39 @@ export const initializePayment = async (
     let paymentUrl: string;
     const reference = `SWIFT_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 if (gateway === "flutterwave") {
-// Smart subaccount split: Association gets EXACTLY base amount using FLAT charge
+// Smart subaccount split: Association gets EXACTLY base amount using FLAT charge (corrected)
 let subaccounts: any[] = []; // empty by default
 
 if (due.flutterwaveSubaccountId) {
-  const originalBaseAmount = baseAmount; // trusted from DB (or req.body.baseAmount)
+  const originalBaseAmount = baseAmount; // trusted from DB
   const studentTotalPay = totalAmount;
 
   if (originalBaseAmount > 0 && studentTotalPay >= originalBaseAmount) {
-    // Association gets exactly the base amount (in kobo)
-    const associationKobo = Math.round(originalBaseAmount * 100);
+    // Calculate how much YOU (platform) should get (extra charge / commission) in kobo
+    const platformKobo = Math.round((studentTotalPay - originalBaseAmount) * 100);
 
-    // You (platform) get everything else (in kobo)
-    const totalKobo = Math.round(studentTotalPay * 100);
-    const platformKobo = totalKobo - associationKobo;
-
-    // Safety: If platformKobo is negative (impossible normally), set to 0
+    // Safety: Never negative
     const safePlatformKobo = Math.max(platformKobo, 0);
 
-    console.log("FLAT Split Calc:", {
+    console.log("CORRECTED FLAT Split Calc:", {
       baseAmount: originalBaseAmount,
       totalPay: studentTotalPay,
+      platformTakesKobo: safePlatformKobo,
       associationGets: originalBaseAmount,
-      platformGets: safePlatformKobo / 100,
-      platformKobo: safePlatformKobo
+      platformTakes: safePlatformKobo / 100
     });
 
     subaccounts = [
       {
         id: due.flutterwaveSubaccountId,
         transaction_charge_type: "flat",
-        transaction_charge: safePlatformKobo  // THIS IS IN KOBO – what YOU take
+        transaction_charge: safePlatformKobo  // THIS IS WHAT ASSOCIATION "PAYS" YOU (your share in kobo)
       }
     ];
   } else {
     console.warn("Invalid baseAmount or calculation skipped – no split");
   }
 }
-
   const flwPayload = {
     tx_ref: reference,
     amount: totalAmount,
