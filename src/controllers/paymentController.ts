@@ -79,8 +79,15 @@ if (gateway === "flutterwave") {
       const flutterwaveFeeRate = 1.4 / 100; // 0.014
       const amountAfterFlutterwaveFee = studentTotalPay * (1 - flutterwaveFeeRate);
 
-      const associationSharePercent = (originalBaseAmount / amountAfterFlutterwaveFee) * 100;
+      let associationSharePercent = (originalBaseAmount / amountAfterFlutterwaveFee) * 100;
 
+      // SAFETY BUFFER: Reduce by 0.05% – 0.1% to avoid "charge greater than amount" error
+    associationSharePercent = associationSharePercent - 0.05; // or 0.1 if still fails
+    
+    // Make sure it's not over 100% or negative
+    associationSharePercent = Math.min(associationSharePercent, 99.99);
+    associationSharePercent = Math.max(associationSharePercent, 0);
+    
       console.log("Split Calc:", {
   originalBase: originalBaseAmount,
   totalPay: studentTotalPay,
@@ -91,7 +98,8 @@ if (gateway === "flutterwave") {
         {
           id: due.flutterwaveSubaccountId,
           transaction_charge_type: "percentage",
-          transaction_charge: associationSharePercent.toFixed(2)
+          transaction_charge: Math.floor(associationSharePercent * 100) / 100  // rounds down safely
+          
         }
       ];
     } else {
