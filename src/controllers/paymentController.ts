@@ -267,3 +267,42 @@ export const searchPayments = async (req: Request, res: Response) => {
 };
 
 console.log("✅ PaymentController loaded (Paystack only)");
+
+// GET /api/flutterwave/banks
+export const getBanks = async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get("https://api.flutterwave.com/v3/banks/NG", {
+      headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` }
+    });
+    res.json(response.data.data); // returns array of { code, name }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch banks" });
+  }
+};
+
+// POST /api/flutterwave/verify-account
+export const verifyAccountName = async (req: Request, res: Response) => {
+  const { accountNumber, bankCode } = req.body;
+
+  if (!accountNumber || !bankCode) {
+    return res.status(400).json({ message: "Account number and bank code required" });
+  }
+
+  try {
+    const response = await axios.post(
+      "https://api.flutterwave.com/v3/accounts/resolve",
+      { account_number: accountNumber, account_bank: bankCode },
+      { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } }
+    );
+
+    if (response.data.status === "success") {
+      res.json({ accountName: response.data.data.account_name });
+    } else {
+      res.status(400).json({ message: "Invalid account details" });
+    }
+  } catch (err) {
+    res.status(500).json({ message: "Verification failed" });
+  }
+};
+

@@ -4,6 +4,8 @@ import SubAdmin from "../models/SubAdmin";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Payment from "../models/Payment";
+import Due from "../models/Due";
+import Payout from "../models/Payout";
 
 export const createSubAdmin = async (req: AuthRequest, res: Response) => {
   try {
@@ -146,4 +148,23 @@ export const loginSubAdmin = async (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
+};
+// GET /api/payouts/my (protect with subadmin middleware)
+export const getMyPayout = async (req: AuthRequest, res: Response) => {
+  if (!req.user || !req.user.association) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const association = req.user.association;
+  const due = await Due.findOne({ association }); // assuming you have association field
+  if (!due) return res.status(404).json({ message: "No due found" });
+
+  const payout = (await Payout.findOne({ dueId: due._id })) || {
+    totalCollectedBase: 0,
+    totalPaidOut: 0,
+    pendingAmount: 0,
+    payouts: []
+  };
+
+  res.json(payout);
 };

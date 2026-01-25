@@ -4,7 +4,9 @@ import {
   verifyPayment,
   getMyPayments,
   getAllPayments,
-  searchPayments
+  searchPayments,
+  getBanks,
+  verifyAccountName
 } from "../controllers/paymentController";
 import { generateReceipt } from "../controllers/receiptController";
 import { authMiddleware } from "../middlewares/authMiddleware";
@@ -31,6 +33,9 @@ router.get("/my", authMiddleware, getMyPayments);
 router.get("/all", authMiddleware, isSuperAdmin, getAllPayments);
 // ----- SEARCH RECEIPTS (ADMIN) -----
 router.get("/search", authMiddleware, searchPayments);
+
+router.get("/flutterwave/banks", getBanks);
+router.post("/flutterwave/verify-account", verifyAccountName);
 
 // In src/routes/paymentRoutes.ts
 router.get("/verify/:reference", async (req, res) => {
