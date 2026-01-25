@@ -14,7 +14,6 @@ import { generateReceipt } from "./src/controllers/receiptController";
 import adminRoutes from "./src/routes/adminRoutes";
 import subAdminRoutes from "./src/routes/subAdminRoutes";
 import whatsappRoutes from "./src/routes/whatsappRoutes";
-import { updatePayoutOnSuccess } from "./src/controllers/payoutController";
 
 
 dotenv.config(); // Must be first
@@ -31,6 +30,7 @@ app.post(
 );
 
 // Flutterwave Webhook
+// Flutterwave Webhook
 app.post(
   "/api/webhook/flutterwave",
   express.raw({ type: "*/*" }),
@@ -43,7 +43,7 @@ app.post(
 
       let decryptedBody = rawBody;
 
-      // Decrypt if encrypted
+      // Decrypt if encrypted (new accounts send base64 encrypted)
       if (rawBody && rawBody.length > 0 && rawBody[0] !== "{" && rawBody[0] !== "[") {
         const secret = process.env.FLUTTERWAVE_SECRET_KEY!;
 
@@ -93,23 +93,6 @@ app.post(
           };
 
           await payment.save();
-
-          // NEW: Update payout record for Flutterwave success
-          const dueId = payment.metadata?.dueId;
-          const baseAmount = payment.metadata?.baseAmount || 0;
-
-          console.log("Trying to update payout from webhook:", { dueId, baseAmount });
-
-          if (dueId && baseAmount > 0) {
-            try {
-              await updatePayoutOnSuccess(dueId, baseAmount);
-              console.log(`Payout updated via Flutterwave webhook for due ${dueId}: +₦${baseAmount}`);
-            } catch (err) {
-              console.error("Webhook payout update FAILED:", err);
-            }
-          } else {
-            console.warn("No payout update from webhook - missing dueId or baseAmount");
-          }
 
           console.log("✅ FLUTTERWAVE PAYMENT UPDATED:", ref, "Base restored:", payment.baseAmount);
         } else {
