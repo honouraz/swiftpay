@@ -7,7 +7,6 @@ import Due from "../models/Due";
 import Payment from "../models/Payment";
 import { initializeFlutterwave } from "../services/flutterwave";
 import { updatePayoutOnSuccess } from "../controllers/payoutController";
-
 /* =====================================================
    PAYSTACK — INITIALIZE PAYMENT
 ===================================================== */
@@ -152,7 +151,8 @@ else {
       userId: req.user ? req.user.id : null,
     });
 
-    await payment.save();
+   await payment.save();
+console.log("New payment created with metadata:", payment.metadata);
 
     res.json({ status: "success", paymentUrl, reference });
   } catch (err: any) {
@@ -206,13 +206,30 @@ export const verifyPayment = async (req: Request, res: Response) => {
 
     await payment.save();
 
-    // NEW: Update payout record with this payment's base amount
+   // After await payment.save();
+console.log("Payment saved successfully:", {
+  reference: reference,
+  status: payment.status,
+  dueId: payment.metadata?.dueId,
+  baseAmount: payment.metadata?.baseAmount,
+  metadata: payment.metadata
+});
+
+// NEW: Update payout record
 const dueId = payment.metadata?.dueId;
 const baseAmount = payment.metadata?.baseAmount || 0;
 
+console.log("Trying to update payout:", { dueId, baseAmount });
+
 if (dueId && baseAmount > 0) {
-  await updatePayoutOnSuccess(dueId, baseAmount);
-  console.log(`Payout updated for due ${dueId}: +₦${baseAmount}`);
+  try {
+    await updatePayoutOnSuccess(dueId, baseAmount);
+    console.log(`Payout updated for due ${dueId}: +₦${baseAmount}`);
+  } catch (err) {
+    console.error("Payout update FAILED:", err);
+  }
+} else {
+  console.warn("No payout update - missing dueId or baseAmount");
 }
 
     // 4️⃣ REDIRECT (THIS FIXES EVERYTHING)
