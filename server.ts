@@ -31,7 +31,6 @@ app.post(
 );
 
 // Flutterwave Webhook
-// Flutterwave Webhook
 app.post(
   "/api/webhook/flutterwave",
   express.raw({ type: "*/*" }),
@@ -44,7 +43,7 @@ app.post(
 
       let decryptedBody = rawBody;
 
-      // Decrypt if encrypted (new accounts send base64 encrypted)
+      // Decrypt if encrypted
       if (rawBody && rawBody.length > 0 && rawBody[0] !== "{" && rawBody[0] !== "[") {
         const secret = process.env.FLUTTERWAVE_SECRET_KEY!;
 
@@ -94,14 +93,22 @@ app.post(
           };
 
           await payment.save();
-          
-// NEW: Update payout record for Flutterwave success
+
+          // NEW: Update payout record for Flutterwave success
           const dueId = payment.metadata?.dueId;
           const baseAmount = payment.metadata?.baseAmount || 0;
 
+          console.log("Trying to update payout from webhook:", { dueId, baseAmount });
+
           if (dueId && baseAmount > 0) {
-            await updatePayoutOnSuccess(dueId, baseAmount);
-            console.log(`Payout updated via Flutterwave webhook for due ${dueId}: +₦${baseAmount}`);
+            try {
+              await updatePayoutOnSuccess(dueId, baseAmount);
+              console.log(`Payout updated via Flutterwave webhook for due ${dueId}: +₦${baseAmount}`);
+            } catch (err) {
+              console.error("Webhook payout update FAILED:", err);
+            }
+          } else {
+            console.warn("No payout update from webhook - missing dueId or baseAmount");
           }
 
           console.log("✅ FLUTTERWAVE PAYMENT UPDATED:", ref, "Base restored:", payment.baseAmount);
