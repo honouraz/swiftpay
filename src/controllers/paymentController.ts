@@ -6,6 +6,7 @@ import { Request, Response } from "express";
 import Due from "../models/Due";
 import Payment from "../models/Payment";
 import { initializeFlutterwave } from "../services/flutterwave";
+import { updatePayoutOnSuccess } from "../controllers/payoutController";
 
 /* =====================================================
    PAYSTACK — INITIALIZE PAYMENT
@@ -204,6 +205,15 @@ export const verifyPayment = async (req: Request, res: Response) => {
     };
 
     await payment.save();
+
+    // NEW: Update payout record with this payment's base amount
+const dueId = payment.metadata?.dueId;
+const baseAmount = payment.metadata?.baseAmount || 0;
+
+if (dueId && baseAmount > 0) {
+  await updatePayoutOnSuccess(dueId, baseAmount);
+  console.log(`Payout updated for due ${dueId}: +₦${baseAmount}`);
+}
 
     // 4️⃣ REDIRECT (THIS FIXES EVERYTHING)
     return res.redirect(
