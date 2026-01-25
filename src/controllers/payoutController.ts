@@ -90,7 +90,7 @@ export const initiatePayout = async (req: Request, res: Response) => {
         currency: "NGN",
         beneficiary_name: due.accountName
       },
-      { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } }
+      { headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` } }
     );
 
     // Update payout

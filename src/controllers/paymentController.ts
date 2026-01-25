@@ -271,14 +271,14 @@ console.log("✅ PaymentController loaded (Paystack only)");
 // Flutterwave Bank List & Verification
 export const getBanks = async (req: Request, res: Response) => {
   try {
-    console.log("Using FLW key:", process.env.FLW_SECRET_KEY ? "YES (hidden)" : "NO - MISSING");
-    if (!process.env.FLW_SECRET_KEY) {
-      console.error("FLW_SECRET_KEY is not set in environment!");
+    console.log("Using FLW key:", process.env.FLUTTERWAVE_SECRET_KEY ? "YES (hidden)" : "NO - MISSING");
+    if (!process.env.FLUTTERWAVE_SECRET_KEY) {
+      console.error("FLUTTERWAVE_SECRET_KEY is not set in environment!");
       return res.status(500).json({ message: "Server configuration error: Missing Flutterwave key" });
     }
 
     const response = await axios.get("https://api.flutterwave.com/v3/banks/NG", {
-      headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` }
+      headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` }
     });
     res.json(response.data.data); // returns array of { code, name }
   } catch (err: any) {
@@ -295,14 +295,14 @@ export const verifyAccountName = async (req: Request, res: Response) => {
   }
 
   try {
-    if (!process.env.FLW_SECRET_KEY) {
-      console.error("FLW_SECRET_KEY is not set in environment!");
+    if (!process.env.FLUTTERWAVE_SECRET_KEY) {
+      console.error("FLUTTERWAVE_SECRET_KEY is not set in environment!");
       return res.status(500).json({ message: "Server configuration error: Missing Flutterwave key" });
     }
     const response = await axios.post(
       "https://api.flutterwave.com/v3/accounts/resolve",
       { account_number: accountNumber, account_bank: bankCode },
-      { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } }
+      { headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` } }
     );
 
     if (response.data.status === "success") {
