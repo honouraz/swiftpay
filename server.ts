@@ -230,6 +230,7 @@ app.use("/api/whatsapp", whatsappRoutes);
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/subadmin", subAdminRoutes);
+app.use("/api", paymentRoutes);
 /* ---------------------------------------------
    INITIALIZE PAYMENT
 ---------------------------------------------- */

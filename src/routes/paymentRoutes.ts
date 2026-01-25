@@ -13,6 +13,7 @@ import { authMiddleware } from "../middlewares/authMiddleware";
 import { isSuperAdmin } from "../middlewares/isSuperAdmin";
 import { Router, Request, Response } from "express";
 import Payment from "../models/Payment";
+import { initiatePayout, getAllPayouts } from "../controllers/payoutController";
 
 const router = express.Router();
 
@@ -36,6 +37,10 @@ router.get("/search", authMiddleware, searchPayments);
 
 router.get("/flutterwave/banks", getBanks);
 router.post("/flutterwave/verify-account", verifyAccountName);
+
+// Add these two for payouts (admin only)
+router.get("/payouts/all", getAllPayouts);
+router.post("/payouts/initiate/:dueId", initiatePayout);
 
 // In src/routes/paymentRoutes.ts
 router.get("/verify/:reference", async (req, res) => {

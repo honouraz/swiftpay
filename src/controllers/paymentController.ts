@@ -268,20 +268,19 @@ export const searchPayments = async (req: Request, res: Response) => {
 
 console.log("✅ PaymentController loaded (Paystack only)");
 
-// GET /api/flutterwave/banks
+// Flutterwave Bank List & Verification
 export const getBanks = async (req: Request, res: Response) => {
   try {
     const response = await axios.get("https://api.flutterwave.com/v3/banks/NG", {
       headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` }
     });
     res.json(response.data.data); // returns array of { code, name }
-  } catch (err) {
-    console.error(err);
+  } catch (err: any) {
+    console.error("Get banks error:", err);
     res.status(500).json({ message: "Failed to fetch banks" });
   }
 };
 
-// POST /api/flutterwave/verify-account
 export const verifyAccountName = async (req: Request, res: Response) => {
   const { accountNumber, bankCode } = req.body;
 
@@ -301,8 +300,8 @@ export const verifyAccountName = async (req: Request, res: Response) => {
     } else {
       res.status(400).json({ message: "Invalid account details" });
     }
-  } catch (err) {
+  } catch (err: any) {
+    console.error("Verify account error:", err);
     res.status(500).json({ message: "Verification failed" });
   }
 };
-
