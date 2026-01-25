@@ -14,6 +14,7 @@ import { generateReceipt } from "./src/controllers/receiptController";
 import adminRoutes from "./src/routes/adminRoutes";
 import subAdminRoutes from "./src/routes/subAdminRoutes";
 import whatsappRoutes from "./src/routes/whatsappRoutes";
+import { updatePayoutOnSuccess } from "./src/controllers/payoutController";
 
 
 dotenv.config(); // Must be first
@@ -93,6 +94,15 @@ app.post(
           };
 
           await payment.save();
+          
+// NEW: Update payout record for Flutterwave success
+          const dueId = payment.metadata?.dueId;
+          const baseAmount = payment.metadata?.baseAmount || 0;
+
+          if (dueId && baseAmount > 0) {
+            await updatePayoutOnSuccess(dueId, baseAmount);
+            console.log(`Payout updated via Flutterwave webhook for due ${dueId}: +₦${baseAmount}`);
+          }
 
           console.log("✅ FLUTTERWAVE PAYMENT UPDATED:", ref, "Base restored:", payment.baseAmount);
         } else {
