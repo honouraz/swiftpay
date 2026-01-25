@@ -271,6 +271,11 @@ console.log("✅ PaymentController loaded (Paystack only)");
 // Flutterwave Bank List & Verification
 export const getBanks = async (req: Request, res: Response) => {
   try {
+    if (!process.env.FLW_SECRET_KEY) {
+      console.error("FLW_SECRET_KEY is not set in environment!");
+      return res.status(500).json({ message: "Server configuration error: Missing Flutterwave key" });
+    }
+    
     const response = await axios.get("https://api.flutterwave.com/v3/banks/NG", {
       headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` }
     });
