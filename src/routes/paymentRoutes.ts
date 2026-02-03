@@ -43,16 +43,49 @@ router.get("/payouts/all", getAllPayouts);
 router.post("/payouts/initiate/:dueId", initiatePayout);
 
 // In src/routes/paymentRoutes.ts
-router.get("/verify/:reference", async (req, res) => {
-  try {
-    const payment = await Payment.findOne({ reference: req.params.reference });
-    if (!payment) {
-      return res.status(404).json({ message: "Payment not found" });
+// QR VERIFY — SUBADMIN ONLY
+router.get(
+  "/verify/:reference",
+  authMiddleware,
+  async (req: any, res: Response) => {
+    try {
+      const payment = await Payment.findOne({ reference: req.params.reference });
+
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+
+      // Already confirmed
+      if (payment.confirmed) {
+        return res.json({
+          status: "already_confirmed",
+          message: "Payment already confirmed",
+        });
+      }
+
+      // Role check
+      if (req.user.role !== "subadmin") {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Confirm payment
+      payment.confirmed = true;
+      payment.confirmedAt = new Date();
+      payment.confirmedBy = req.user._id;
+      payment.qrScans += 1;
+
+      await payment.save();
+
+      return res.json({
+        status: "confirmed",
+        message: "Payment confirmed successfully",
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
     }
-    res.json(payment);
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
   }
-});
+);
+
 export default router;
 // Remove all Monnify/Flutterwave comments

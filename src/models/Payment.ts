@@ -5,7 +5,9 @@ const paymentSchema = new mongoose.Schema({
   reference: { type: String, required: true, unique: true },
   amount: { type: Number, required: true },           // total paid (in naira)
   email: { type: String, required: true },
-  status: { type: String, default: "success" },
+  status: { type: String, 
+    enum: ["pending", "success", "failed"],
+    default: "success" },
 
   // Add userId for direct ref
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -25,6 +27,22 @@ const paymentSchema = new mongoose.Schema({
   association: { type: String },                      // e.g NASS, JPS, MLS
   paidAt: { type: Date, default: Date.now },
   metadata: mongoose.Schema.Types.Mixed,
+
+  confirmed: {
+  type: Boolean,
+  default: false,
+  index: true,
+},
+confirmedAt: Date,
+confirmedBy: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+},
+qrScans: {
+  type: Number,
+  default: 0,
+},
+
 });
 
 export default mongoose.model("Payment", paymentSchema);

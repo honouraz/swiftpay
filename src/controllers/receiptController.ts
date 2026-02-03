@@ -39,6 +39,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
 
     const doc = new PDFDocument({ size: "A4", margin: 40 });
     res.setHeader("Content-Type", "application/pdf");
+   res.setHeader("Cache-Control", "public, max-age=86400");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     doc.pipe(res);
 
@@ -47,9 +48,12 @@ export const generateReceipt = async (req: Request, res: Response) => {
     if (fs.existsSync(bgPath)) {
       // PDFKit does not accept an 'opacity' option on image; use graphics state instead
       doc.save();
-      doc.opacity(1.55);
-      doc.image(bgPath, 0, 0, { width: doc.page.width, height: doc.page.height });
-      doc.restore();
+doc.opacity(0.08); // subtle watermark
+doc.image(bgPath, doc.page.width / 4, doc.page.height / 3, {
+  width: 300,
+});
+doc.restore();
+
     }
 
     // Color Map
@@ -126,6 +130,16 @@ const verifyUrl = `https://swiftpaybyhon.vercel.app/verify/${payment.reference}`
     const qrData = await QRCode.toDataURL(verifyUrl);
     const qrBuffer = Buffer.from(qrData.split(",")[1], "base64");
     doc.image(qrBuffer, doc.page.width - 150, doc.page.height - 180, { width: 110 });
+doc.fontSize(9).fillColor("black")
+  .text("Scan to verify authenticity", doc.page.width - 170, doc.page.height - 60);
+
+
+    doc.fontSize(10).fillColor("gray")
+  .text(
+    "This receipt is system-generated and verifiable only via SwiftPay QR code. Any alteration invalidates it.",
+    70,
+    doc.page.height - 90
+  );
 
     // Footer
     doc.fillColor("black").fontSize(14).font("Helvetica-Bold")
