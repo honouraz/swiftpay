@@ -3,6 +3,7 @@ dotenv.config();
 
 import axios from "axios";
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import Due from "../models/Due";
 import Payment from "../models/Payment";
 import { initializeFlutterwave } from "../services/flutterwave";
@@ -341,4 +342,23 @@ export const verifyAccountName = async (req: Request, res: Response) => {
     console.error("Verify account error:", err);
     res.status(500).json({ message: "Verification failed" });
   }
+};
+
+export const confirmPayment = async (req: Request & { user?: { id: string } }, res: Response) => {
+  const payment = await Payment.findById(req.params.id);
+
+  if (!payment) {
+    return res.status(404).json({ message: "Payment not found" });
+  }
+
+  if (payment.confirmed) {
+    return res.json({ message: "Already confirmed" });
+  }
+
+  payment.confirmed = true;
+  payment.confirmedAt = new Date();
+  payment.confirmedBy = req.user?.id ? new mongoose.Types.ObjectId(req.user.id) : new mongoose.Types.ObjectId();
+  await payment.save();
+
+  res.json({ success: true, payment });
 };
