@@ -44,7 +44,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
     doc.pipe(res);
 
     // Background Image — full opacity 0.15
-    const publicPath = path.join(process.cwd(), "public");
+    const publicPath = path.join(__dirname, "../../public");
 const bgPath = path.join(publicPath, "receipt-bg.jpg");
     if (fs.existsSync(bgPath)) {
       // PDFKit does not accept an 'opacity' option on image; use graphics state instead
@@ -77,19 +77,23 @@ doc.restore();
     // BIG SwiftPay Logo top left
 const swiftLogoPath = path.join(publicPath, "swiftpay-logo.png");
     if (fs.existsSync(swiftLogoPath)) {
+      doc.rect(0,0, doc.page.width, 140).fill(headerColor); // Ensure header bar is behind logo
       doc.image(swiftLogoPath, 50, 50, { width: 220 }); // BIG like old
     }
+const fontPath = path.join(process.cwd(), "public/fonts");
+
+doc.registerFont("Roman", path.join(fontPath, "Roman.ttf"));
 
     // Title center under logo
-    doc.fillColor("white").fontSize(32).font("Helvetica-Bold")
+    doc.fillColor("white").fontSize(32).font("Roman")
        .text("SWIFTPAY", doc.page.width / 10, 60, { align: "center" });
 
     doc.fontSize(18).text("Payment Receipt", doc.page.width / 10, 100, { align: "center" });
 
     // Association Logo top right — far end, no overlap
-let assocLogoPath = path.join(publicPath, "nas");    
+let assocLogoPath = path.join(publicPath, "nas.png");    
 if (lowerDue.includes("nass")) 
-  assocLogoPath = path.join(publicPath, "nass.png");
+  assocLogoPath = path.join(publicPath, "Nass.png");
     else if (lowerDue.includes("sug")) 
       assocLogoPath = path.join(publicPath, "sug.png");
     else if (lowerDue.includes("idowu"))
@@ -106,12 +110,13 @@ console.log("EXISTS:", fs.existsSync(bgPath));
     // Fields — start lower, spread to fill page
     let y = 200;
     const field = (label: string, value: string, p0?: string) => {
-      doc.fillColor("black").fontSize(16).font("Helvetica-Bold")
+      doc.fillColor("black").fontSize(16).font("Roman")
          .text(label + ":", 70, y);
-      doc.fontSize(16).font("Helvetica")
+      doc.fontSize(16).font("Roman")
          .text(value, 240, y);
       y += 40; // Space to fill page
     };
+
 
     field("Student Name", payerName);
     field("Matric Number", matric);
@@ -130,13 +135,13 @@ field("Amount", `₦${payment.baseAmount.toLocaleString()}`);    field("Status",
     const boxY = y;
     doc.roundedRect(70, boxY, doc.page.width - 140, 80, 25).fill(headerColor);
 
-    doc.fillColor("white").fontSize(18).font("Helvetica-Bold")
+    doc.fillColor("white").fontSize(18).font("Roman")
        .text("Amount Paid", 90, boxY + 20);
 
     doc.fontSize(40).text(`₦${(payment.baseAmount || 0).toLocaleString()}`, 90, boxY + 50); // ₦ big & correct
 
     // QR Code bottom right
-const verifyUrl = `https://www.swiftpayy.pro/verify/${payment.reference}`;
+const verifyUrl = `${process.env.FRONTEND_URL}/verify/${payment.reference}`;
     const qrData = await QRCode.toDataURL(verifyUrl);
     const qrBuffer = Buffer.from(qrData.split(",")[1], "base64");
     doc.image(qrBuffer, doc.page.width - 150, doc.page.height - 180, { width: 110 });
@@ -152,7 +157,7 @@ doc.fontSize(9).fillColor("black")
   );
 
     // Footer
-    doc.fillColor("black").fontSize(14).font("Helvetica-Bold")
+    doc.fillColor("black").fontSize(14).font("Roman")
        .text("Powered by SwiftPay", 0, doc.page.height - 60, { align: "center", width: doc.page.width });
 
     doc.end();

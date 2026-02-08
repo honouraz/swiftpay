@@ -189,6 +189,8 @@ export const verifyPayment = async (req: Request, res: Response) => {
     }
 
     // 2️⃣ Find existing payment (created during initialize)
+    
+    
     const payment = await Payment.findOne({ reference });
 
     if (!payment) {
