@@ -49,7 +49,7 @@ const bgPath = path.join(publicPath, "receipt-bg.jpg");
     if (fs.existsSync(bgPath)) {
       // PDFKit does not accept an 'opacity' option on image; use graphics state instead
       doc.save();
-doc.opacity(0.08); // subtle watermark
+doc.opacity(1.50); // subtle watermark
 doc.image(bgPath, doc.page.width / 4, doc.page.height / 3, {
   width: 300,
 });
@@ -60,8 +60,8 @@ doc.restore();
     // Color Map
     let headerColor = "#3F51B5";
     const lowerDue = dueName.toLowerCase();
-    if (lowerDue.includes("nass")) headerColor = "#ace9b0ff";
-    else if (lowerDue.includes("sug")) headerColor = "#4CAF50";
+    if (lowerDue.includes("nass")) headerColor = "#ed8ae6ff";
+    else if (lowerDue.includes("2")) headerColor = "#4CAF50";
     else if (lowerDue.includes("esan")) headerColor = "#FF5722";
     else if (lowerDue.includes("sossa")) headerColor = "#9C27B0";
     else if (lowerDue.includes("idowu")) headerColor = "#20ef12ff";
@@ -93,8 +93,8 @@ doc.registerFont("Roman", path.join(fontPath, "Roman.ttf"));
 let assocLogoPath = path.join(publicPath, "nas");    
 if (lowerDue.includes("nass")) 
   assocLogoPath = path.join(publicPath, "Nass.png");
-    else if (lowerDue.includes("sug")) 
-      assocLogoPath = path.join(publicPath, "sug.png");
+    else if (lowerDue.includes("sug")) assocLogoPath = path.join(publicPath, "sug.png");
+    else if (lowerDue.includes("dues2")) assocLogoPath = path.join(publicPath, "sug.png");
     else if (lowerDue.includes("idowu"))
        assocLogoPath = path.join(publicPath, "idowu.png");
 
