@@ -81,7 +81,7 @@ const swiftLogoPath = path.join(publicPath, "swiftpay-logo.png");
     }
 
     // Title center under logo
-    doc.fillColor("white").fontSize(32).font("Times-New-Roman")
+    doc.fillColor("white").fontSize(32).font("Helvetica-Bold")
        .text("SWIFTPAY", doc.page.width / 10, 60, { align: "center" });
 
     doc.fontSize(18).text("Payment Receipt", doc.page.width / 10, 100, { align: "center" });
