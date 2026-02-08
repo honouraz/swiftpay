@@ -28,7 +28,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
 
     const meta = (payment.metadata as any) || {};
     const dueName = typeof meta.dueName === "string" ? meta.dueName : "SwiftPay Payment";
-
+    const level = typeof meta.level === "string" ? meta.level : "N/A";
     // Filename: PayerName_Matric.pdf
     const payerName = meta.payerName || "Student";
     const matric = meta.matricNumber || "Unknown";
@@ -116,7 +116,7 @@ console.log("EXISTS:", fs.existsSync(bgPath));
     field("Student Name", payerName);
     field("Matric Number", matric);
     field("Department", meta.department || "N/A");
-    field("Level", meta.Level || "N/A");
+    field("Level", level || "N/A");
     field("Phone", meta.phone || "N/A");
     field("Payment For", dueName);
     field("Reference", payment.reference);
@@ -136,7 +136,7 @@ field("Amount", `₦${payment.baseAmount.toLocaleString()}`);    field("Status",
     doc.fontSize(40).text(`₦${(payment.baseAmount || 0).toLocaleString()}`, 90, boxY + 50); // ₦ big & correct
 
     // QR Code bottom right
-const verifyUrl = `https://www.swiftpayp.pro/verify/${payment.reference}`;
+const verifyUrl = `https://www.swiftpayy.pro/verify/${payment.reference}`;
     const qrData = await QRCode.toDataURL(verifyUrl);
     const qrBuffer = Buffer.from(qrData.split(",")[1], "base64");
     doc.image(qrBuffer, doc.page.width - 150, doc.page.height - 180, { width: 110 });
