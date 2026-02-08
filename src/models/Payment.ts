@@ -23,10 +23,13 @@ const paymentSchema = new mongoose.Schema({
   baseAmount: { type: Number, default: 0 },         // original due
   platformCommission: { type: Number, default: 0 },  // 5.5% / 4.5%
   extraCharge: { type: Number, default: 0 },        // fixed extra (e.g ESAN)
-  dueType: { type: String },                         // e.g NASS, SUG, ESAN, FACULTY
-  association: { type: String },                      // e.g NASS, JPS, MLS
-  paidAt: { type: Date, default: Date.now },
-  metadata: mongoose.Schema.Types.Mixed,
+dueType: { type: String },                         // e.g NASS, SUG, ESAN, FACULTY
+association: {
+  type: String,
+  required: true,
+},
+paidAt: { type: Date, default: Date.now },
+metadata: mongoose.Schema.Types.Mixed,
 
   confirmed: {
   type: Boolean,

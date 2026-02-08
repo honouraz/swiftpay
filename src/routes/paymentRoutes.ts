@@ -49,21 +49,21 @@ router.post(
   authMiddleware,
   async (req: any, res: Response) => {
     try {
-const payment = await Payment.findById(req.params.id);
+      const payment = await Payment.findById(req.params.id);
 
       if (!payment) {
         return res.status(404).json({ message: "Payment not found" });
       }
 
       // Role check
-if (req.user.role !== "subadmin") {
-  return res.status(403).json({ message: "Unauthorized" });
-}
+      if (req.user.role !== "subadmin") {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
 
-// 🔐 ASSOCIATION CHECK (PUT IT HERE)
-if (payment.association !== req.user.association) {
-  return res.status(403).json({ message: "Access denied" });
-}
+      // 🔐 Association check
+      if (payment.association !== req.user.association) {
+        return res.status(403).json({ message: "Access denied" });
+      }
 
       // Already confirmed
       if (payment.confirmed) {
@@ -71,11 +71,6 @@ if (payment.association !== req.user.association) {
           status: "already_confirmed",
           message: "Payment already confirmed",
         });
-      }
-
-      // Role check
-      if (req.user.role !== "subadmin") {
-        return res.status(403).json({ message: "Unauthorized" });
       }
 
       // Confirm payment
@@ -87,28 +82,38 @@ if (payment.association !== req.user.association) {
       await payment.save();
 
       return res.json({
-        firmed",
+        status: "confirmed",
         payment,
       });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ message: "Server error" });
+      return res.status(500).json({ message: "Server error" });
     }
   }
 );
+
 
 router.post(
   "/payments/verify/:reference",
   authMiddleware,
   async (req: any, res: Response) => {
     try {
-      const payment = await Payment.findOne({ reference: req.params.reference });
+      const payment = await Payment.findOne({
+        reference: req.params.reference,
+      });
 
       if (!payment) {
         return res.status(404).json({ message: "Payment not found" });
       }
 
-      // Already confirmed
+      if (req.user.role !== "subadmin") {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      if (payment.association !== req.user.association) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       if (payment.confirmed) {
         return res.json({
           status: "already_confirmed",
@@ -116,16 +121,6 @@ router.post(
         });
       }
 
-      // Role check
-      if (req.user.role !== "subadmin") {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-      if (payment.association !== req.user.association) {
-  return res.status(403).json({ message: "Access denied" });
-}
-
-
-      // Confirm payment
       payment.confirmed = true;
       payment.confirmedAt = new Date();
       payment.confirmedBy = req.user._id;
@@ -134,15 +129,16 @@ router.post(
       await payment.save();
 
       return res.json({
-        firmed",
+        status: "confirmed",
         message: "Payment confirmed successfully",
       });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ message: "Server error" });
+      return res.status(500).json({ message: "Server error" });
     }
   }
 );
+
 
 export default router;
 // Remove all Monnify/Flutterwave comments
