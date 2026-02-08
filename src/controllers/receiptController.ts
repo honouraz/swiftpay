@@ -70,7 +70,8 @@ doc.restore();
     doc.rect(0, 0, doc.page.width, 140).fill(headerColor);
 
     // ← Swiftpay top left small
-    doc.fillColor("white").fontSize(14).font("ALGERIAN")
+
+    doc.fillColor("white").fontSize(14).font("Helvetica-Bold")
        .text("Swiftpayby HON. TECH", 50, 20);
 
     // BIG SwiftPay Logo top left
