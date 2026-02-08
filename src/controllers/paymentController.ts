@@ -148,6 +148,7 @@ else {
       amount: totalAmount,
       email,
       status: "pending",
+      association: due.name,
       metadata,
       userId: req.user ? req.user.id : null,
     });

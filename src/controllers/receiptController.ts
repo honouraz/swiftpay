@@ -44,7 +44,8 @@ export const generateReceipt = async (req: Request, res: Response) => {
     doc.pipe(res);
 
     // Background Image — full opacity 0.15
-    const bgPath = path.join(__dirname, "../../public/receipt-bg.jpg");
+    const publicPath = path.join(process.cwd(), "public");
+const bgPath = path.join(publicPath, "receipt-bg.jpg");
     if (fs.existsSync(bgPath)) {
       // PDFKit does not accept an 'opacity' option on image; use graphics state instead
       doc.save();
@@ -59,7 +60,7 @@ doc.restore();
     // Color Map
     let headerColor = "#3F51B5";
     const lowerDue = dueName.toLowerCase();
-    if (lowerDue.includes("nass")) headerColor = "#3F51B5";
+    if (lowerDue.includes("nass")) headerColor = "#ace9b0ff";
     else if (lowerDue.includes("sug")) headerColor = "#4CAF50";
     else if (lowerDue.includes("esan")) headerColor = "#FF5722";
     else if (lowerDue.includes("sossa")) headerColor = "#9C27B0";
@@ -69,26 +70,33 @@ doc.restore();
     doc.rect(0, 0, doc.page.width, 140).fill(headerColor);
 
     // ← Swiftpay top left small
-    doc.fillColor("white").fontSize(14).font("Helvetica-Bold")
+    doc.fillColor("white").fontSize(14).font("ALGERIAN")
        .text("Swiftpayby HON. TECH", 50, 20);
 
     // BIG SwiftPay Logo top left
-    const swiftLogoPath = path.join(__dirname, "../../public/swiftpay-logo.png");
+const swiftLogoPath = path.join(publicPath, "swiftpay-logo.png");
     if (fs.existsSync(swiftLogoPath)) {
       doc.image(swiftLogoPath, 50, 50, { width: 220 }); // BIG like old
     }
 
     // Title center under logo
-    doc.fillColor("white").fontSize(32).font("Helvetica-Bold")
+    doc.fillColor("white").fontSize(32).font("Times-New-Roman")
        .text("SWIFTPAY", doc.page.width / 10, 60, { align: "center" });
 
     doc.fontSize(18).text("Payment Receipt", doc.page.width / 10, 100, { align: "center" });
 
     // Association Logo top right — far end, no overlap
-    let assocLogoPath = path.join(__dirname, "../../public/nass.png");
-    if (lowerDue.includes("nass")) assocLogoPath = path.join(__dirname, "../../public/nass.png");
-    else if (lowerDue.includes("sug")) assocLogoPath = path.join(__dirname, "../../public/sug.png");
-    else if (lowerDue.includes("idowu")) assocLogoPath = path.join(__dirname, "../../public/sug.png");
+let assocLogoPath = path.join(publicPath, "nas");    
+if (lowerDue.includes("nass")) 
+  assocLogoPath = path.join(publicPath, "nass.png");
+    else if (lowerDue.includes("sug")) 
+      assocLogoPath = path.join(publicPath, "sug.png");
+    else if (lowerDue.includes("idowu"))
+       assocLogoPath = path.join(publicPath, "idowu.png");
+
+    console.log("BG PATH:", bgPath);
+console.log("EXISTS:", fs.existsSync(bgPath));
+
 
     if (fs.existsSync(assocLogoPath)) {
       doc.image(assocLogoPath, doc.page.width - 180, 20, { width: 140 }); // Far right, safe
@@ -107,6 +115,7 @@ doc.restore();
     field("Student Name", payerName);
     field("Matric Number", matric);
     field("Department", meta.department || "N/A");
+    field("Level", meta.Level || "N/A");
     field("Phone", meta.phone || "N/A");
     field("Payment For", dueName);
     field("Reference", payment.reference);
@@ -126,7 +135,7 @@ field("Amount", `₦${payment.baseAmount.toLocaleString()}`);    field("Status",
     doc.fontSize(40).text(`₦${(payment.baseAmount || 0).toLocaleString()}`, 90, boxY + 50); // ₦ big & correct
 
     // QR Code bottom right
-const verifyUrl = `https://swiftpaybyhon.vercel.app/verify/${payment.reference}`;
+const verifyUrl = `https://www.swiftpayp.pro/verify/${payment.reference}`;
     const qrData = await QRCode.toDataURL(verifyUrl);
     const qrBuffer = Buffer.from(qrData.split(",")[1], "base64");
     doc.image(qrBuffer, doc.page.width - 150, doc.page.height - 180, { width: 110 });
