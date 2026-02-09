@@ -6,7 +6,8 @@ import {
   getAllPayments,
   searchPayments,
   getBanks,
-  verifyAccountName
+  verifyAccountName,
+  getPaymentStatus
 } from "../controllers/paymentController";
 import { generateReceipt } from "../controllers/receiptController";
 import { authMiddleware } from "../middlewares/authMiddleware";
@@ -137,6 +138,11 @@ router.post(
       return res.status(500).json({ message: "Server error" });
     }
   }
+);
+
+router.get(
+  "/payments/status/:reference",
+  getPaymentStatus
 );
 
 

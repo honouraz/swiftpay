@@ -365,3 +365,29 @@ export const confirmPayment = async (req: Request & { user?: { id: string } }, r
 
   res.json({ success: true, payment });
 };
+
+
+/* =====================================================
+   GET PAYMENT STATUS (FOR FRONTEND)
+===================================================== */
+export const getPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const { reference } = req.params;
+
+    const payment = await Payment.findOne({ reference });
+
+    if (!payment) {
+      return res.status(404).json({ status: "not_found" });
+    }
+
+    return res.json({
+      status: payment.status, // success | pending | failed
+      reference: payment.reference,
+      amount: payment.amount,
+      baseAmount: payment.metadata?.baseAmount || 0,
+    });
+  } catch (err) {
+    console.error("GET PAYMENT STATUS ERROR:", err);
+    res.status(500).json({ status: "error" });
+  }
+};
