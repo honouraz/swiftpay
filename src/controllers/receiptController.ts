@@ -56,7 +56,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
     const bgPath = path.join(publicPath, "receipt-bg.jpg");
     if (fs.existsSync(bgPath)) {
       doc.save();
-      doc.opacity(0.12);
+      doc.opacity(0.9);
       doc.image(bgPath, doc.page.width / 2 - 200, doc.page.height / 2 - 200, {
         width: 400,
       });

@@ -82,7 +82,7 @@ export const initiatePayout = async (req: Request, res: Response) => {
     const transferRes = await axios.post(
       "https://api.flutterwave.com/v3/transfers",
       {
-        account_bank: "044", // Example - replace with real bank code if you add it later
+        account_bank: due.bankCode, // Example - replace with real bank code if you add it later
         account_number: due.accountNumber,
         amount,
         narration: `Payout for ${due.name}`,
@@ -101,7 +101,7 @@ export const initiatePayout = async (req: Request, res: Response) => {
       amount,
       reference: transferRes.data.data.reference,
       paidAt: new Date(),
-      status: "success"
+      status: "pending"
     });
     await payout.save();
 

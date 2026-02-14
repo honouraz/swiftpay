@@ -37,7 +37,9 @@ const DueSchema = new Schema({
   },
   bankName: { type: String, default: "" },          // e.g. "Access Bank"
 accountNumber: { type: String, default: "" },
-accountName: { type: String, default: "" },       // Verified beneficiary name
+accountName: { type: String, default: "" }, 
+bankCode: { type: String, required: true },
+      // Verified beneficiary name
 }, { timestamps: true });
 
 DueSchema.index({ name: 1 });
