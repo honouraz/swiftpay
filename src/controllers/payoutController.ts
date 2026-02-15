@@ -101,7 +101,8 @@ export const initiatePayout = async (req: Request, res: Response) => {
       amount,
       reference: transferRes.data.data.reference,
       paidAt: new Date(),
-      status: "pending"
+      status: "pending",
+      mode: "flutterwave"
     });
     await payout.save();
 
@@ -112,3 +113,34 @@ export const initiatePayout = async (req: Request, res: Response) => {
   }
 };
 
+export const manualPayout = async (req: Request, res: Response) => {
+  const { dueId } = req.params;
+  const { amount, reference, note } = req.body;
+
+  try {
+    const payout = await Payout.findOne({ dueId });
+
+    if (!payout || payout.pendingAmount < amount) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+
+    payout.totalPaidOut += amount;
+    payout.pendingAmount -= amount;
+
+    payout.payouts.push({
+      amount,
+      reference,
+      paidAt: new Date(),
+      mode: "manual",
+      adminNote: note,
+      status: "success"
+    });
+
+    await payout.save();
+
+    res.json({ message: "Manual payout recorded successfully" });
+
+  } catch (err) {
+    res.status(500).json({ message: "Error recording payout" });
+  }
+};

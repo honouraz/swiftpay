@@ -7,7 +7,7 @@ import {
   searchPayments,
   getBanks,
   verifyAccountName,
-  getPaymentStatus
+  getPaymentStatus,
 } from "../controllers/paymentController";
 import { generateReceipt } from "../controllers/receiptController";
 import { authMiddleware } from "../middlewares/authMiddleware";

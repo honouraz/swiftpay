@@ -32,7 +32,8 @@ const PayoutSchema = new mongoose.Schema({
       enum: ["pending", "success", "failed"], 
       default: "pending" 
     },
-    adminNote: { type: String }
+    adminNote: { type: String },
+    mode: { type: String, enum: ["flutterwave", "manual"], default: "manual" },
   }],
 }, { timestamps: true });
 

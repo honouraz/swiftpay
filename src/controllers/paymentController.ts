@@ -279,23 +279,33 @@ export const getAllPayments = async (req: Request, res: Response) => {
    SEARCH PAYMENTS (ADMIN)
 ===================================================== */
 export const searchPayments = async (req: Request, res: Response) => {
-  const { q } = req.query;
+  const { q, levels } = req.query;
 
   try {
-    const payments = await Payment.find({
-      $or: [
-        { dueName: { $regex: q, $options: "i" } },
+    let filter: any = { status: "success" };
+
+    if (q) {
+      filter.$or = [
+        { "metadata.matricNumber": { $regex: q, $options: "i" } },
         { "metadata.payerName": { $regex: q, $options: "i" } },
-      ],
-      status: "success",
-    }).sort({ paidAt: -1 });
+        { "metadata.dueName": { $regex: q, $options: "i" } },
+        { "metadata.level": { $regex: q, $options: "i" } }
+      ];
+    }
+
+    if (levels) {
+      const levelArray = (levels as string).split(",");
+      filter["metadata.level"] = { $in: levelArray };
+    }
+
+    const payments = await Payment.find(filter).sort({ paidAt: -1 });
 
     res.json(payments);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 console.log("✅ PaymentController loaded (Paystack only)");
 
@@ -358,10 +368,16 @@ export const confirmPayment = async (req: Request & { user?: { id: string } }, r
     return res.json({ message: "Already confirmed" });
   }
 
-  payment.confirmed = true;
-  payment.confirmedAt = new Date();
-  payment.confirmedBy = req.user?.id ? new mongoose.Types.ObjectId(req.user.id) : new mongoose.Types.ObjectId();
-  await payment.save();
+ if (!req.user?.id) {
+  return res.status(401).json({ message: "Unauthorized" });
+}
+
+payment.confirmed = true;
+payment.confirmedAt = new Date();
+payment.confirmedBy = new mongoose.Types.ObjectId(req.user.id);
+
+
+await payment.save();
 
   res.json({ success: true, payment });
 };
@@ -391,3 +407,20 @@ export const getPaymentStatus = async (req: Request, res: Response) => {
     res.status(500).json({ status: "error" });
   }
 };
+export const getPayments = async (req: Request, res: Response) => {
+  const { levels } = req.query;
+
+  let filter: any = {
+    status: "success"  // VERY IMPORTANT
+  };
+
+  if (levels) {
+    const levelArray = (levels as string).split(",");
+    filter["metadata.level"] = { $in: levelArray };
+  }
+
+  const payments = await Payment.find(filter).sort({ paidAt: -1 });
+
+  res.json(payments);
+};
+
