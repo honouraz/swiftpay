@@ -22,6 +22,25 @@ export const generateReceiptBuffer = async (paymentId: string): Promise<Buffer> 
   });
 };
 
+export const generateReceiptByMatric = async (req: Request, res: Response) => {
+  try {
+    const payment = await Payment.findOne({
+      "metadata.matricNumber": req.params.matric,
+      status: "success"
+    }).sort({ createdAt: -1 });
+
+    if (!payment) return res.status(404).send("Payment not found");
+
+    req.params.id = payment._id.toString();
+    return generateReceipt(req, res);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+};
+
+
 export const generateReceipt = async (req: Request, res: Response) => {
   try {
     const payment = await Payment.findById(req.params.id);
@@ -66,7 +85,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
     // ===== HEADER COLOR PER DUE =====
     let headerColor = "#3F51B5";
     const lowerDue = dueName.toLowerCase();
-    if (lowerDue.includes("nass")) headerColor = "#6a97aeff";
+    if (lowerDue.includes("nass")) headerColor = "#e1e861ff";
     else if (lowerDue.includes("esan")) headerColor = "#FF5722";
     else if (lowerDue.includes("sossa")) headerColor = "#9C27B0";
     else if (lowerDue.includes("idowu")) headerColor = "#20ef12";
@@ -148,7 +167,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
       .text(`₦${payment.baseAmount.toLocaleString()}`, 90, y + 45);
 
     // ===== QR CODE =====
-    const verifyUrl = `${process.env.FRONTEND_URL}/verify/${payment.reference}`;
+    const verifyUrl = `${process.env.FRONTEND_URL}/verify/${payment._id}`;
     const qrData = await QRCode.toDataURL(verifyUrl);
     const qrBuffer = Buffer.from(qrData.split(",")[1], "base64");
     doc.image(qrBuffer, doc.page.width - 150, doc.page.height - 190, { width: 110 });

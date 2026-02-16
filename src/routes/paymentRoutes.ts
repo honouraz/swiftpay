@@ -9,7 +9,7 @@ import {
   verifyAccountName,
   getPaymentStatus,
 } from "../controllers/paymentController";
-import { generateReceipt } from "../controllers/receiptController";
+import { generateReceipt, generateReceiptByMatric } from "../controllers/receiptController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { isSuperAdmin } from "../middlewares/isSuperAdmin";
 import { Router, Request, Response } from "express";
@@ -27,6 +27,8 @@ router.get("/flutterwave/verify/:reference", verifyPayment);
 
 // ----- RECEIPT -----
 router.get("/receipt/:reference", generateReceipt);
+router.get("/payments/receipt/matric/:matric", generateReceiptByMatric);
+
 
 // ----- USER PAYMENTS -----
 router.get("/my", authMiddleware, getMyPayments);
