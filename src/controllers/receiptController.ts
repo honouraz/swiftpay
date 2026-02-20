@@ -85,7 +85,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
     // ===== HEADER COLOR PER DUE =====
     let headerColor = "#3F51B5";
     const lowerDue = dueName.toLowerCase();
-    if (lowerDue.includes("nass")) headerColor = "#e1e861ff";
+    if (lowerDue.includes("nass")) headerColor = "#20ef12";
     else if (lowerDue.includes("esan")) headerColor = "#FF5722";
     else if (lowerDue.includes("sossa")) headerColor = "#9C27B0";
     else if (lowerDue.includes("idowu")) headerColor = "#20ef12";
