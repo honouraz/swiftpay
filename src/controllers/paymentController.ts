@@ -163,6 +163,65 @@ console.log("New payment created with metadata:", payment.metadata);
   }
 };
 
+export const verifyFlutterwavePayment = async (req: Request, res: Response) => {
+  const { reference } = req.params;  // tx_ref
+
+  try {
+    const response = await axios.get(
+      `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${reference}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+        },
+      }
+    );
+
+    const data = response.data;
+
+    if (data.status !== "success" || data.data.status !== "successful") {
+      return res.redirect(`${process.env.FRONTEND_URL}/payment-failed?reason=verification_failed`);
+    }
+
+    const tx = data.data;
+
+    // Find and update payment
+    const payment = await Payment.findOne({ reference });
+
+    if (!payment) {
+      console.warn(`Payment not found for ref ${reference} after Flutterwave verify`);
+      return res.redirect(`${process.env.FRONTEND_URL}/payment-success?reference=${reference}&warning=not_found`);
+    }
+
+    payment.status = "success";
+    payment.paidAt = new Date(tx.charged_at || Date.now());
+    payment.amount = tx.amount;
+
+    // Merge any extra meta if needed (Flutterwave returns your original meta)
+    payment.metadata = {
+      ...payment.metadata,
+      flutterwaveTxId: tx.id,
+      // Add more if useful
+    };
+
+    await payment.save();
+
+    console.log(`Flutterwave payment verified & saved: ${reference}`);
+
+    // Optional: update payout
+    const dueId = payment.metadata?.dueId;
+    if (dueId && payment.metadata?.baseAmount) {
+      await updatePayoutOnSuccess(dueId, payment.metadata.baseAmount);
+    }
+
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/payment-success?reference=${reference}&status=success`
+    );
+  } catch (err: any) {
+    console.error("Flutterwave verify error:", err.response?.data || err.message);
+    return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+  }
+};
+
 /* =====================================================
    PAYSTACK — VERIFY PAYMENT
 ===================================================== */
@@ -251,15 +310,19 @@ if (dueId && baseAmount > 0) {
 ===================================================== */
 export const getMyPayments = async (req: any, res: Response) => {
   try {
+    const userId = req.user.id; // must exist since ProtectedRoute + authMiddleware
+
     const payments = await Payment.find({
-      $or: [{ userId: req.user.id }, { email: req.user.email }],
+      userId: userId,           // ← payments I initiated
       status: "success",
-    }).sort({ paidAt: -1 });
+    })
+      .sort({ paidAt: -1 })
+      .lean();
 
     res.json(payments);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("getMyPayments error:", err);
+    res.status(500).json({ message: "Failed to load your transactions" });
   }
 };
 

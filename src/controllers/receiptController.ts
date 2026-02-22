@@ -67,6 +67,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Cache-Control", "public, max-age=86400");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename=receipt-${payment.reference}.pdf`);
     doc.pipe(res);
 
     const publicPath = path.join(process.cwd(), "public");

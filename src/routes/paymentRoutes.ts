@@ -8,6 +8,7 @@ import {
   getBanks,
   verifyAccountName,
   getPaymentStatus,
+  verifyFlutterwavePayment,
 } from "../controllers/paymentController";
 import { generateReceipt, generateReceiptByMatric } from "../controllers/receiptController";
 import { authMiddleware } from "../middlewares/authMiddleware";
@@ -24,12 +25,30 @@ router.get("/paystack/verify/:reference", verifyPayment);
 
 router.post("/flutterwave/initialize", initializePayment);
 router.get("/flutterwave/verify/:reference", verifyPayment);
+// paymentRoutes.ts
+router.get("/flutterwave/verify/:reference", verifyFlutterwavePayment);
 
 // ----- RECEIPT -----
 router.get("/receipt/:reference", generateReceipt);
 router.get("/payments/receipt/matric/:matric", generateReceiptByMatric);
 
+router.get("/payments/:reference/receipt", authMiddleware, async (req, res) => {
+  try {
+    // Optional: add role check if needed (e.g. isSuperAdmin or owner)
+    const payment = await Payment.findOne({ reference: req.params.reference });
+    if (!payment) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
 
+    // Reuse your existing generateReceipt logic
+    // If generateReceipt expects req.params.reference, just pass it
+    req.params.reference = payment.reference;  // make sure it uses the right param name
+    return generateReceipt(req, res);
+  } catch (err) {
+    console.error("Receipt proxy error:", err);
+    res.status(500).json({ message: "Failed to generate receipt" });
+  }
+});
 // ----- USER PAYMENTS -----
 router.get("/my", authMiddleware, getMyPayments);
 

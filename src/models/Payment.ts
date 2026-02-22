@@ -46,7 +46,10 @@ qrScans: {
   type: Number,
   default: 0,
 },
-
 });
+
+paymentSchema.index({ "metadata.matricNumber": 1 });
+paymentSchema.index({ email: 1 });
+paymentSchema.index({ association: 1, status: 1 });
 
 export default mongoose.model("Payment", paymentSchema);
