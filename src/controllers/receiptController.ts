@@ -22,6 +22,22 @@ export const generateReceiptBuffer = async (paymentId: string): Promise<Buffer> 
   });
 };
 
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+export const uploadReceiptToCloudinary = async (pdfBuffer: Buffer): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      { resource_type: 'raw', folder: 'swiftpay/receipts' },
+      (error: any, result: unknown) => error ? reject(error) : resolve(result)
+    ).end(pdfBuffer);
+  });
+};
+
 export const generateReceiptByMatric = async (req: Request, res: Response) => {
   try {
     const payment = await Payment.findOne({
@@ -67,7 +83,6 @@ export const generateReceipt = async (req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Cache-Control", "public, max-age=86400");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader('Content-Disposition', `attachment; filename=receipt-${payment.reference}.pdf`);
     doc.pipe(res);
 
     const publicPath = path.join(process.cwd(), "public");
@@ -86,7 +101,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
     // ===== HEADER COLOR PER DUE =====
     let headerColor = "#3F51B5";
     const lowerDue = dueName.toLowerCase();
-    if (lowerDue.includes("nass")) headerColor = "#20ef12";
+    if (lowerDue.includes("nass")) headerColor = "#891563ff";
     else if (lowerDue.includes("esan")) headerColor = "#FF5722";
     else if (lowerDue.includes("sossa")) headerColor = "#9C27B0";
     else if (lowerDue.includes("idowu")) headerColor = "#20ef12";

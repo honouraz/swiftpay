@@ -205,6 +205,29 @@ export const verifyFlutterwavePayment = async (req: Request, res: Response) => {
 
     await payment.save();
 
+// Generate PDF buffer in memory (don't save to disk)
+const PDFDocument = require('pdfkit');
+const doc = new PDFDocument();
+const buffers: Buffer[] = [];
+
+doc.on('data', buffers.push.bind(buffers));
+doc.on('end', async () => {
+  const pdfBuffer = Buffer.concat(buffers);
+
+  // Send email
+  if (payment.email) {
+    await sendReceiptEmail(payment.email, payment.reference, pdfBuffer);
+  }
+});
+
+doc.fontSize(20).text('SwiftPay Receipt', { align: 'center' });
+doc.moveDown();
+doc.fontSize(14).text(`Reference: ${payment.reference}`);
+doc.text(`Name: ${payment.metadata?.payerName || 'N/A'}`);
+doc.text(`Matric: ${payment.metadata?.matricNumber || 'N/A'}`);
+// ... add all other fields like before
+doc.end();
+
     console.log(`Flutterwave payment verified & saved: ${reference}`);
 
     // Optional: update payout
@@ -486,4 +509,8 @@ export const getPayments = async (req: Request, res: Response) => {
 
   res.json(payments);
 };
+
+function sendReceiptEmail(email: string, reference: string, pdfBuffer: Buffer<ArrayBuffer>) {
+  throw new Error("Function not implemented.");
+}
 
