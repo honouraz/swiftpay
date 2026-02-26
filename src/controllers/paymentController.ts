@@ -74,6 +74,15 @@ if (gateway === "flutterwave") {
   if (due.flutterwaveSubaccountId) {
     // Buffer to cover Flutterwave fees/VAT/stamp (usually ₦50–150 is enough)
   
+    const safeExtraCharge = Math.min(extraCharge, totalAmount - 1);
+
+subaccounts = [
+  {
+    id: due.flutterwaveSubaccountId,
+    transaction_charge_type: "flat",
+    transaction_charge: safeExtraCharge * 100,
+  }
+];
     subaccounts = [
   {
     id: due.flutterwaveSubaccountId,
@@ -81,6 +90,12 @@ if (gateway === "flutterwave") {
     transaction_charge: extraCharge * 100,
   }
 ];
+console.log("SPLIT DEBUG:", {
+  baseAmount,
+  extraCharge,
+  totalAmount,
+  transactionChargeKobo: extraCharge * 100
+});
     console.log("SUBACCOUNT SPLIT (FIXED & BUFFERED):", {
       subaccountId: due.flutterwaveSubaccountId,
       type: "flat → you receive fixed with buffer",
