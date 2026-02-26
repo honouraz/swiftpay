@@ -76,20 +76,16 @@ if (gateway === "flutterwave") {
   
     const safeExtraCharge = Math.min(extraCharge, totalAmount - 1);
 
+const mainSharePercent = (extraCharge / totalAmount) * 100;
+
 subaccounts = [
   {
     id: due.flutterwaveSubaccountId,
-    transaction_charge_type: "flat",
-    transaction_charge: safeExtraCharge * 100,
+    transaction_charge_type: "percentage",
+    transaction_charge: mainSharePercent,
   }
 ];
-    subaccounts = [
-  {
-    id: due.flutterwaveSubaccountId,
-    transaction_charge_type: "flat",
-    transaction_charge: extraCharge * 100,
-  }
-];
+    
 console.log("SPLIT DEBUG:", {
   baseAmount,
   extraCharge,
