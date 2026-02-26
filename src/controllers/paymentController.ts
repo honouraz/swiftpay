@@ -73,23 +73,17 @@ if (gateway === "flutterwave") {
 
   if (due.flutterwaveSubaccountId) {
     // Buffer to cover Flutterwave fees/VAT/stamp (usually ₦50–150 is enough)
-    const bufferKobo = 100 * 100;          // ₦100 buffer — adjust up/down after test
-    const yourChargeKobo = (200 * 100) + bufferKobo;  // ₦200 + buffer = 30000 kobo
-
+  
     subaccounts = [
-      {
-        id: due.flutterwaveSubaccountId,
-        transaction_charge_type: "flat",           // YOU receive fixed amount
-        transaction_charge: yourChargeKobo         // You get ₦300 (covers fees → net ~₦200)
-      }
-    ];
-
+  {
+    id: due.flutterwaveSubaccountId,
+    transaction_charge_type: "flat",
+    transaction_charge: extraCharge * 100,
+  }
+];
     console.log("SUBACCOUNT SPLIT (FIXED & BUFFERED):", {
       subaccountId: due.flutterwaveSubaccountId,
       type: "flat → you receive fixed with buffer",
-      yourTotalChargeKobo: yourChargeKobo,
-      bufferKobo,
-      expectedNetToYou: 200,
       expectedToSubaccount: baseAmount,
       totalPaidByStudent: totalAmount
     });
@@ -191,12 +185,19 @@ export const verifyFlutterwavePayment = async (req: Request, res: Response) => {
     payment.paidAt = new Date(tx.charged_at || Date.now());
     payment.amount = tx.amount;
 
+    if (tx.amount !== payment.amount) {
+  console.error("Amount mismatch!");
+  return res.redirect(`${process.env.FRONTEND_URL}/payment-failed?reason=amount_mismatch`);
+}
+
     // Merge any extra meta if needed (Flutterwave returns your original meta)
     payment.metadata = {
-      ...payment.metadata,
-      flutterwaveTxId: tx.id,
-      // Add more if useful
-    };
+  ...payment.metadata,
+  flutterwaveTxId: tx.id,
+  chargedAmount: tx.charged_amount,
+  processorFee: tx.app_fee || tx.fee,
+  amountSettled: tx.amount_settled,
+};
 
     await payment.save();
 
@@ -263,6 +264,7 @@ export const verifyPayment = async (req: Request, res: Response) => {
       return res.redirect(
         `${process.env.FRONTEND_URL}/payment-failed`
       );
+    
     }
 
     // 2️⃣ Find existing payment (created during initialize)
@@ -388,7 +390,7 @@ export const searchPayments = async (req: Request, res: Response) => {
 };
 
 
-console.log("✅ PaymentController loaded (Paystack only)");
+console.log("✅ PaymentController loaded (Paystack + Flutterwave)");
 
 // Flutterwave Bank List & Verification
 export const getBanks = async (req: Request, res: Response) => {
