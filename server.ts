@@ -225,9 +225,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use("/api/users", userRoutes);
 app.use("/api/dues", dueRoutes);
 app.use("/api/payments", paymentRoutes);
-
 app.use("/api/whatsapp", whatsappRoutes);
-
 app.use("/api/admin", adminRoutes);
 app.use("/api/subadmin", subAdminRoutes);
 app.use("/api", paymentRoutes);
@@ -235,7 +233,7 @@ app.use("/api", paymentRoutes);
    INITIALIZE PAYMENT
 ---------------------------------------------- */
 
-/* ---------------------------------------------
+/* --------------------------------------------
    CONNECT DB
 ---------------------------------------------- */
 connectDB();

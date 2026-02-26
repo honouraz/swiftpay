@@ -69,39 +69,34 @@ export const initializePayment = async (
     let paymentUrl: string;
     const reference = `SWIFT_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 if (gateway === "flutterwave") {
-// Smart subaccount split: Association gets EXACTLY base amount using FLAT charge (corrected)
-let subaccounts: any[] = []; // empty by default
+  let subaccounts: any[] = [];
 
-if (due.flutterwaveSubaccountId) {
-  const originalBaseAmount = baseAmount; // trusted from DB
-  const studentTotalPay = totalAmount;
-
-  if (originalBaseAmount > 0 && studentTotalPay >= originalBaseAmount) {
-    // Calculate how much YOU (platform) should get (extra charge / commission) in kobo
-    const platformKobo = Math.round((studentTotalPay - originalBaseAmount) * 100);
-
-    // Safety: Never negative
-    const safePlatformKobo = Math.max(platformKobo, 0);
-
-    console.log("CORRECTED FLAT Split Calc:", {
-      baseAmount: originalBaseAmount,
-      totalPay: studentTotalPay,
-      platformTakesKobo: safePlatformKobo,
-      associationGets: originalBaseAmount,
-      platformTakes: safePlatformKobo / 100
-    });
+  if (due.flutterwaveSubaccountId) {
+    // Buffer to cover Flutterwave fees/VAT/stamp (usually ₦50–150 is enough)
+    const bufferKobo = 100 * 100;          // ₦100 buffer — adjust up/down after test
+    const yourChargeKobo = (200 * 100) + bufferKobo;  // ₦200 + buffer = 30000 kobo
 
     subaccounts = [
       {
         id: due.flutterwaveSubaccountId,
-        transaction_charge_type: "flat",
-        transaction_charge: safePlatformKobo  // THIS IS WHAT ASSOCIATION "PAYS" YOU (your share in kobo)
+        transaction_charge_type: "flat",           // YOU receive fixed amount
+        transaction_charge: yourChargeKobo         // You get ₦300 (covers fees → net ~₦200)
       }
     ];
+
+    console.log("SUBACCOUNT SPLIT (FIXED & BUFFERED):", {
+      subaccountId: due.flutterwaveSubaccountId,
+      type: "flat → you receive fixed with buffer",
+      yourTotalChargeKobo: yourChargeKobo,
+      bufferKobo,
+      expectedNetToYou: 200,
+      expectedToSubaccount: baseAmount,
+      totalPaidByStudent: totalAmount
+    });
   } else {
-    console.warn("Invalid baseAmount or calculation skipped – no split");
+    console.warn("No subaccount ID found for due:", due.name);
   }
-}
+
   const flwPayload = {
     tx_ref: reference,
     amount: totalAmount,
@@ -117,7 +112,7 @@ if (due.flutterwaveSubaccountId) {
       description: `Payment for ${due.name} - Level ${level}`,
     },
     meta: metadata,
-    subaccounts: subaccounts  // ← Use the variable
+    subaccounts: subaccounts
   };
 
   const flwRes = await initializeFlutterwave(flwPayload);
