@@ -9,6 +9,7 @@ export interface IDue extends Document {
     "300": number;
     "400": number;
     "500": number;
+    "DE": number;
   };
   extraCharge: number;
   platformFeePercent: number;
@@ -26,6 +27,7 @@ const DueSchema = new Schema({
       "300": 0,
       "400": 0,
       "500": 0,
+      "DE": 0,
     },
   },
   extraCharge: { type: Number, default: 0 },
