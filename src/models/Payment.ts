@@ -46,6 +46,14 @@ qrScans: {
   type: Number,
   default: 0,
 },
+
+virtualAccount: {
+  accountNumber: String,
+  bankName: String,
+  accountName: String,
+  flwRef: String
+},
+
 });
 
 paymentSchema.index({ "metadata.matricNumber": 1 });

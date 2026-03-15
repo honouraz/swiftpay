@@ -93,7 +93,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
       doc.save();
       doc.opacity(0.9);
       doc.image(bgPath, doc.page.width / 2 - 200, doc.page.height / 2 - 200, {
-        width: 400,
+        width: 500,
       });
       doc.restore();
     }
@@ -183,7 +183,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
       .text(`₦${payment.baseAmount.toLocaleString()}`, 90, y + 45);
 
     // ===== QR CODE =====
-    const verifyUrl = `${process.env.FRONTEND_URL}/verify/${payment._id}`;
+    const verifyUrl = `${process.env.FRONTEND_URL}/verify/${payment.reference}`;
     const qrData = await QRCode.toDataURL(verifyUrl);
     const qrBuffer = Buffer.from(qrData.split(",")[1], "base64");
     doc.image(qrBuffer, doc.page.width - 150, doc.page.height - 190, { width: 110 });

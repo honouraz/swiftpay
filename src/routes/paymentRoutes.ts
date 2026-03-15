@@ -16,6 +16,7 @@ import { isSuperAdmin } from "../middlewares/isSuperAdmin";
 import { Router, Request, Response } from "express";
 import Payment from "../models/Payment";
 import { initiatePayout, getAllPayouts } from "../controllers/payoutController";
+import { createVirtualAccount } from "../controllers/virtualAccountController";
 
 const router = express.Router();
 
@@ -39,7 +40,7 @@ router.get("/payments/:reference/receipt", authMiddleware, async (req, res) => {
     if (!payment) {
       return res.status(404).json({ message: "Payment not found" });
     }
-
+router.post("/create-va", createVirtualAccount)
     // Reuse your existing generateReceipt logic
     // If generateReceipt expects req.params.reference, just pass it
     req.params.reference = payment.reference;  // make sure it uses the right param name
