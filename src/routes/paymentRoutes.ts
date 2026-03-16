@@ -29,6 +29,9 @@ router.get("/flutterwave/verify/:reference", verifyPayment);
 // paymentRoutes.ts
 router.get("/flutterwave/verify/:reference", verifyFlutterwavePayment);
 
+// ----- VIRTUAL ACCOUNT -----
+router.post("/create-va", createVirtualAccount)
+
 // ----- RECEIPT -----
 router.get("/receipt/:reference", generateReceipt);
 router.get("/payments/receipt/matric/:matric", generateReceiptByMatric);
@@ -40,7 +43,6 @@ router.get("/payments/:reference/receipt", authMiddleware, async (req, res) => {
     if (!payment) {
       return res.status(404).json({ message: "Payment not found" });
     }
-router.post("/create-va", createVirtualAccount)
     // Reuse your existing generateReceipt logic
     // If generateReceipt expects req.params.reference, just pass it
     req.params.reference = payment.reference;  // make sure it uses the right param name
