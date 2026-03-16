@@ -3,7 +3,7 @@ import Payment from "../models/Payment";
 
 export const createVirtualAccount = async (req: any, res: any) => {
   try {
-    const { email, dueId, amount, reference } = req.body;
+    const { email, dueId, amount, reference, dueName } = req.body;
 
     const response = await axios.post(
       "https://api.flutterwave.com/v3/virtual-account-numbers",
@@ -13,7 +13,7 @@ export const createVirtualAccount = async (req: any, res: any) => {
         tx_ref: reference,
         amount,
         currency: "NGN",
-        narration: "SwiftPay Payment",
+        narration: `SwiftPay ${dueName} Payment`,
       },
       {
         headers: {

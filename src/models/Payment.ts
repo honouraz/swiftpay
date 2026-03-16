@@ -59,5 +59,9 @@ virtualAccount: {
 paymentSchema.index({ "metadata.matricNumber": 1 });
 paymentSchema.index({ email: 1 });
 paymentSchema.index({ association: 1, status: 1 });
+paymentSchema.index({ "metadata.matricNumber": 1 });
+paymentSchema.index({ "metadata.payerName": 1 });
+paymentSchema.index({ "metadata.level": 1 });
+paymentSchema.index({ paidAt: -1 });
 
 export default mongoose.model("Payment", paymentSchema);

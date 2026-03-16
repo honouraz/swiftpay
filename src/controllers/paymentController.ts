@@ -504,8 +504,12 @@ export const getPaymentStatus = async (req: Request, res: Response) => {
 export const getPayments = async (req: Request, res: Response) => {
   const { levels } = req.query;
 
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 100;
+  const skip = (page - 1) * limit;
+
   let filter: any = {
-    status: "success"  // VERY IMPORTANT
+    status: "success"
   };
 
   if (levels) {
@@ -513,9 +517,19 @@ export const getPayments = async (req: Request, res: Response) => {
     filter["metadata.level"] = { $in: levelArray };
   }
 
-  const payments = await Payment.find(filter).sort({ paidAt: -1 });
+  const payments = await Payment.find(filter)
+    .sort({ paidAt: -1 })
+    .skip(skip)
+    .limit(limit);
 
-  res.json(payments);
+  const total = await Payment.countDocuments(filter);
+
+  res.json({
+    payments,
+    total,
+    page,
+    pages: Math.ceil(total / limit)
+  });
 };
 
 function sendReceiptEmail(email: string, reference: string, pdfBuffer: Buffer<ArrayBuffer>) {
