@@ -101,16 +101,13 @@ export const generateReceipt = async (req: Request, res: Response) => {
     // ===== HEADER COLOR PER DUE =====
     let headerColor = "#3F51B5";
     const lowerDue = dueName.toLowerCase();
-    if (lowerDue.includes("nass")) headerColor = "#891563ff";
+    if (lowerDue.includes("nass")) headerColor = "#091583ff";
     else if (lowerDue.includes("esan")) headerColor = "#FF5722";
     else if (lowerDue.includes("sossa")) headerColor = "#9C27B0";
     else if (lowerDue.includes("idowu")) headerColor = "#20ef12";
 
     // ===== HEADER BAR =====
     doc.rect(0, 0, doc.page.width, 140).fill(headerColor);
-
-    doc.fillColor("white").fontSize(14).font("Helvetica-Bold")
-      .text("SwiftPay by HON. TECH", 50, 20);
 
     const swiftLogo = path.join(publicPath, "swiftpay-logo.png");
     if (fs.existsSync(swiftLogo)) {
@@ -183,7 +180,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
       .text(`₦${payment.baseAmount.toLocaleString()}`, 90, y + 45);
 
     // ===== QR CODE =====
-    const verifyUrl = `${process.env.FRONTEND_URL}/verify/${payment.reference}`;
+const verifyUrl = `${process.env.FRONTEND_URL}/verify/${payment.reference}`;
     const qrData = await QRCode.toDataURL(verifyUrl);
     const qrBuffer = Buffer.from(qrData.split(",")[1], "base64");
     doc.image(qrBuffer, doc.page.width - 150, doc.page.height - 190, { width: 110 });
@@ -211,7 +208,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
       );
 
     doc.fontSize(14).fillColor("black").font("Helvetica-Bold")
-      .text("Powered by SwiftPay", 0, doc.page.height - 60, {
+      .text("Powered by SWIFTPAY", 0, doc.page.height - 60, {
         align: "center",
         width: doc.page.width,
       });
