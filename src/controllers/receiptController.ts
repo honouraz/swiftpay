@@ -13,7 +13,7 @@ import crypto from "crypto";
  * - Dynamic color accents based on payment type
  * - Secure QR code verification
  * - Cryptographic hash for tamper-proofing
- * - Single-page compact layout
+ * - Single-page compact layout with dual watermarks
  */
 
 export const generateReceiptBuffer = async (paymentId: string): Promise<Buffer> => {
@@ -115,41 +115,38 @@ export const generateReceipt = async (req: Request, res: Response) => {
     else if (lowerDue.includes("idowu")) accentColor = "#2E7D32";
 
     // ===== BACKGROUND & BORDER =====
-    // Subtle light gray background for the whole page
     doc.rect(0, 0, doc.page.width, doc.page.height).fill("#F9FAFB");
-
-    // Decorative side accent
     doc.rect(0, 0, 8, doc.page.height).fill(accentColor);
 
     // ===== BACKGROUND WATERMARKS =====
     doc.save();
-    doc.opacity(0.04); // Very subtle watermark
+    doc.opacity(0.05); // Subtle watermark
     
-    // SwiftPay Logo Watermark
+    // SwiftPay Logo Watermark (Centered)
     const swiftLogo = path.join(publicPath, "swiftpay-logo.png");
     if (fs.existsSync(swiftLogo)) {
-      doc.image(swiftLogo, doc.page.width / 2 - 150, doc.page.height / 2 - 150, { width: 300 });
+      doc.image(swiftLogo, doc.page.width / 2 - 125, doc.page.height / 2 - 180, { width: 250 });
     }
 
-    // Association Logo Watermark
+    // Association Logo Watermark (Centered below SwiftPay)
     let assocLogo = "";
     if (lowerDue.includes("nass")) assocLogo = "Nass.png";
     else if (lowerDue.includes("sug")) assocLogo = "sug.png";
     else if (lowerDue.includes("idowu")) assocLogo = "idowu.png";
 
     if (assocLogo && fs.existsSync(path.join(publicPath, assocLogo))) {
-      doc.image(path.join(publicPath, assocLogo), doc.page.width / 2 - 100, doc.page.height / 2 + 50, { width: 200 });
+      doc.image(path.join(publicPath, assocLogo), doc.page.width / 2 - 100, doc.page.height / 2 + 20, { width: 200 });
     }
     doc.restore();
 
     // ===== HEADER SECTION =====
-    doc.rect(0, 0, doc.page.width, 120).fill("#FFFFFF");
-    doc.rect(0, 118, doc.page.width, 2).fill(accentColor + "22");
+    doc.rect(0, 0, doc.page.width, 110).fill("#FFFFFF"); // Reduced header height
+    doc.rect(0, 108, doc.page.width, 2).fill(accentColor + "22");
 
     if (fs.existsSync(swiftLogo)) {
-      doc.image(swiftLogo, 50, 35, { width: 140 });
+      doc.image(swiftLogo, 50, 30, { width: 120 }); // Slightly smaller logo
     } else {
-      doc.fillColor(accentColor).fontSize(24).font("Helvetica-Bold").text("SWIFTPAY", 50, 45);
+      doc.fillColor(accentColor).fontSize(22).font("Helvetica-Bold").text("SWIFTPAY", 50, 40);
     }
 
     // Association Logo on Top Right
