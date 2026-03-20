@@ -1,4 +1,3 @@
-// src/controllers/receiptController.ts
 import PDFDocument from "pdfkit";
 import * as QRCode from "qrcode";
 import { Request, Response } from "express";
@@ -14,6 +13,7 @@ import crypto from "crypto";
  * - Dynamic color accents based on payment type
  * - Secure QR code verification
  * - Cryptographic hash for tamper-proofing
+ * - Single-page compact layout
  */
 
 export const generateReceiptBuffer = async (paymentId: string): Promise<Buffer> => {
@@ -87,7 +87,7 @@ export const generateReceipt = async (req: Request, res: Response) => {
       .digest("hex")
       .slice(0, 20);
 
-    // Create document with generous margins
+    // Create document with slightly larger margins for a breathable feel
     const doc = new PDFDocument({ 
       size: "A4", 
       margin: 50,
@@ -105,8 +105,8 @@ export const generateReceipt = async (req: Request, res: Response) => {
     const publicPath = path.join(process.cwd(), "public");
 
     // ===== DYNAMIC BRANDING COLORS =====
-    let primaryColor = "#1A1A1A"; // Deep Charcoal
-    let accentColor = "#3F51B5";  // Indigo
+    let primaryColor = "#1A1A1A"; // Default deep charcoal
+    let accentColor = "#3F51B5";  // Default indigo
     
     const lowerDue = dueName.toLowerCase();
     if (lowerDue.includes("nass")) accentColor = "#091583";
@@ -114,63 +114,102 @@ export const generateReceipt = async (req: Request, res: Response) => {
     else if (lowerDue.includes("sossa")) accentColor = "#9C27B0";
     else if (lowerDue.includes("idowu")) accentColor = "#2E7D32";
 
-    // ===== BACKGROUND & DECORATION =====
+    // ===== BACKGROUND & BORDER =====
+    // Subtle light gray background for the whole page
     doc.rect(0, 0, doc.page.width, doc.page.height).fill("#F9FAFB");
-    doc.rect(0, 0, 8, doc.page.height).fill(accentColor); // Side accent bar
+
+    // Decorative side accent
+    doc.rect(0, 0, 8, doc.page.height).fill(accentColor);
+
+    // ===== BACKGROUND WATERMARKS =====
+    doc.save();
+    doc.opacity(0.04); // Very subtle watermark
+    
+    // SwiftPay Logo Watermark
+    const swiftLogo = path.join(publicPath, "swiftpay-logo.png");
+    if (fs.existsSync(swiftLogo)) {
+      doc.image(swiftLogo, doc.page.width / 2 - 150, doc.page.height / 2 - 150, { width: 300 });
+    }
+
+    // Association Logo Watermark
+    let assocLogo = "";
+    if (lowerDue.includes("nass")) assocLogo = "Nass.png";
+    else if (lowerDue.includes("sug")) assocLogo = "sug.png";
+    else if (lowerDue.includes("idowu")) assocLogo = "idowu.png";
+
+    if (assocLogo && fs.existsSync(path.join(publicPath, assocLogo))) {
+      doc.image(path.join(publicPath, assocLogo), doc.page.width / 2 - 100, doc.page.height / 2 + 50, { width: 200 });
+    }
+    doc.restore();
 
     // ===== HEADER SECTION =====
     doc.rect(0, 0, doc.page.width, 120).fill("#FFFFFF");
     doc.rect(0, 118, doc.page.width, 2).fill(accentColor + "22");
 
-    const swiftLogo = path.join(publicPath, "swiftpay-logo.png");
     if (fs.existsSync(swiftLogo)) {
       doc.image(swiftLogo, 50, 35, { width: 140 });
     } else {
       doc.fillColor(accentColor).fontSize(24).font("Helvetica-Bold").text("SWIFTPAY", 50, 45);
     }
 
+    // Association Logo on Top Right
+    if (assocLogo && fs.existsSync(path.join(publicPath, assocLogo))) {
+      doc.image(path.join(publicPath, assocLogo), doc.page.width - 130, 25, { width: 80 });
+    }
+
     doc.fillColor(primaryColor).fontSize(10).font("Helvetica-Bold")
-      .text("OFFICIAL PAYMENT RECEIPT", 0, 40, { align: "right", width: doc.page.width - 50 });
+      .text("OFFICIAL PAYMENT RECEIPT", 0, 40, { align: "right", width: doc.page.width - 140 });
     
     doc.fillColor("#6B7280").fontSize(9).font("Helvetica")
-      .text(`Serial: ${receiptSerial}`, 0, 55, { align: "right", width: doc.page.width - 50 });
+      .text(`Serial: ${receiptSerial}`, 0, 55, { align: "right", width: doc.page.width - 140 });
     
-    doc.text(`Date: ${new Date(payment.paidAt || Date.now()).toLocaleDateString('en-GB')}`, 0, 68, { align: "right", width: doc.page.width - 50 });
+    const formattedDateTime = new Date(payment.paidAt || Date.now())
+      .toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+    
+    doc.text(`Date/Time: ${formattedDateTime}`, 0, 68, { align: "right", width: doc.page.width - 140 });
 
     // ===== CONTENT BODY =====
     let y = 160;
 
-    doc.fillColor(accentColor).fontSize(12).font("Helvetica-Bold").text("BILLING DETAILS", 50, y);
+    // Payer Info Header
+    doc.fillColor(accentColor).fontSize(12).font("Helvetica-Bold")
+      .text("BILLING DETAILS", 50, y);
     y += 20;
     doc.rect(50, y, 40, 2).fill(accentColor);
     y += 15;
 
+    // Main Info Grid
     const drawField = (label: string, value: string, currentY: number, isRight = false) => {
       const x = isRight ? doc.page.width / 2 + 20 : 50;
-      doc.fillColor("#9CA3AF").fontSize(8).font("Helvetica-Bold").text(label.toUpperCase(), x, currentY);
-      doc.fillColor(primaryColor).fontSize(11).font("Helvetica").text(value || "N/A", x, currentY + 12);
+      doc.fillColor("#9CA3AF").fontSize(8).font("Helvetica-Bold")
+        .text(label.toUpperCase(), x, currentY);
+      doc.fillColor(primaryColor).fontSize(11).font("Helvetica")
+        .text(value || "N/A", x, currentY + 12);
     };
 
     drawField("Student Name", payerName, y);
     drawField("Matric Number", matric, y, true);
-    y += 45;
+    y += 35;
 
     drawField("Department", meta.department || "General", y);
     drawField("Level", level, y, true);
-    y += 45;
+    y += 35;
 
     drawField("Payment For", dueName, y);
     drawField("Transaction Ref", payment.reference, y, true);
-    y += 60;
+    y += 50;
 
     // ===== AMOUNT HIGHLIGHT BOX =====
-    doc.roundedRect(50, y, doc.page.width - 100, 100, 8).fill("#FFFFFF");
-    doc.roundedRect(50, y, doc.page.width - 100, 100, 8).lineWidth(0.5).stroke("#E5E7EB");
+    doc.roundedRect(50, y, doc.page.width - 100, 80, 8).fill("#FFFFFF");
+    doc.roundedRect(50, y, doc.page.width - 100, 80, 8).lineWidth(0.5).stroke("#E5E7EB");
 
-    doc.fillColor("#6B7280").fontSize(10).font("Helvetica").text("Total Amount Paid", 75, y + 25);
-    doc.fillColor(primaryColor).fontSize(32).font("Helvetica-Bold").text(`₦${payment.baseAmount.toLocaleString()}`, 75, y + 42);
+    doc.fillColor("#6B7280").fontSize(9).font("Helvetica")
+      .text("Total Amount Paid", 75, y + 20);
+    
+    doc.fillColor(primaryColor).fontSize(28).font("Helvetica-Bold")
+      .text(`₦${payment.baseAmount.toLocaleString()}`, 75, y + 35);
 
-    // Status Badge
+    // Status Badge inside the box
     const statusMap: any = {
       success: { label: "SUCCESSFUL", color: "#10B981", bg: "#ECFDF5" },
       pending: { label: "PENDING", color: "#F59E0B", bg: "#FFFBEB" },
@@ -178,26 +217,34 @@ export const generateReceipt = async (req: Request, res: Response) => {
     };
     const status = statusMap[payment.status] || statusMap.pending;
 
-    const badgeWidth = 90;
-    doc.roundedRect(doc.page.width - 50 - badgeWidth - 25, y + 35, badgeWidth, 30, 15).fill(status.bg);
-    doc.fillColor(status.color).fontSize(9).font("Helvetica-Bold")
-      .text(status.label, doc.page.width - 50 - badgeWidth - 25, y + 46, { width: badgeWidth, align: "center" });
+    const badgeWidth = 85;
+    doc.roundedRect(doc.page.width - 50 - badgeWidth - 25, y + 25, badgeWidth, 25, 12.5).fill(status.bg);
+    doc.fillColor(status.color).fontSize(8).font("Helvetica-Bold")
+      .text(status.label, doc.page.width - 50 - badgeWidth - 25, y + 34, { width: badgeWidth, align: "center" });
 
-    y += 130;
+    y += 100;
 
     // ===== VERIFICATION & SECURITY =====
+    // QR Code Section
     const verifyUrl = `${process.env.FRONTEND_URL || 'https://swiftpay.ng'}/verify/${payment.reference}`;
     const qrData = await QRCode.toDataURL(verifyUrl, { margin: 1, color: { dark: primaryColor, light: "#FFFFFF00" } });
     const qrBuffer = Buffer.from(qrData.split(",")[1], "base64");
     
-    doc.image(qrBuffer, doc.page.width - 160, y, { width: 110 });
-    doc.fillColor("#9CA3AF").fontSize(7).font("Helvetica")
-      .text("SCAN TO VERIFY AUTHENTICITY", doc.page.width - 160, y + 115, { width: 110, align: "center" });
+    const bottomY = doc.page.height - 220;
+    y = Math.max(y, bottomY);
 
+    doc.image(qrBuffer, doc.page.width - 150, y, { width: 90 });
+    doc.fillColor("#9CA3AF").fontSize(7).font("Helvetica")
+      .text("SCAN TO VERIFY AUTHENTICITY", doc.page.width - 150, y + 95, { width: 90, align: "center" });
+
+    // Signature Section
     const signPath = path.join(publicPath, "signature.png");
     if (fs.existsSync(signPath)) {
-      doc.image(signPath, 50, y + 20, { width: 100 });
-      doc.fillColor(primaryColor).fontSize(9).font("Helvetica-Bold").text("Authorized Signatory", 50, y + 85);
+      doc.image(signPath, 50, y + 10, { width: 90 });
+      doc.fillColor(primaryColor).fontSize(9).font("Helvetica-Bold")
+        .text("Authorized Signatory", 50, y + 75);
+      doc.fillColor("#9CA3AF").fontSize(8).font("Helvetica")
+        .text("SwiftPay Digital Verification", 50, y + 88);
     }
 
     // ===== FOOTER =====
@@ -205,8 +252,12 @@ export const generateReceipt = async (req: Request, res: Response) => {
     doc.rect(0, footerY, doc.page.width, 80).fill("#FFFFFF");
     doc.rect(0, footerY, doc.page.width, 1).fill("#E5E7EB");
 
-    doc.fillColor("#9CA3AF").fontSize(7).font("Helvetica").text(`SECURITY HASH: ${hash}`, 50, footerY + 20);
-    doc.fillColor(primaryColor).fontSize(10).font("Helvetica-Bold").text("Thank you for using SwiftPay", 0, footerY + 40, { align: "center", width: doc.page.width });
+    doc.fillColor("#9CA3AF").fontSize(7).font("Helvetica")
+      .text(`SECURITY HASH: ${hash}`, 50, footerY + 20);
+    
+    doc.fillColor(primaryColor).fontSize(10).font("Helvetica-Bold")
+      .text("Thank you for using SwiftPay", 0, footerY + 40, { align: "center", width: doc.page.width });
+    
     doc.fillColor("#6B7280").fontSize(8).font("Helvetica")
       .text("This is a computer-generated document. No physical signature required.", 0, footerY + 55, { align: "center", width: doc.page.width });
 
