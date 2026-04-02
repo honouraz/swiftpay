@@ -9,6 +9,8 @@ import {
   verifyAccountName,
   getPaymentStatus,
   verifyFlutterwavePayment,
+  getPublicPaymentStatus,
+  searchPublicReceipts,
 } from "../controllers/paymentController";
 import { generateReceipt, generateReceiptByMatric } from "../controllers/receiptController";
 import { authMiddleware } from "../middlewares/authMiddleware";
@@ -54,6 +56,9 @@ router.get("/payments/:reference/receipt", authMiddleware, async (req, res) => {
 });
 // ----- USER PAYMENTS -----
 router.get("/my", authMiddleware, getMyPayments);
+
+// Add this to your paymentRoutes.ts
+router.get('/status/:reference', getPublicPaymentStatus);
 
 // ----- SUPERADMIN / ALL PAYMENTS -----
 router.get("/all", authMiddleware, isSuperAdmin, getAllPayments);
@@ -169,6 +174,7 @@ router.get(
   getPaymentStatus
 );
 
-
+// Add this to your paymentRoutes.ts
+router.get('/public-search', searchPublicReceipts);
 export default router;
 // Remove all Monnify/Flutterwave comments

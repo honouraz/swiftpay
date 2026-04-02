@@ -59,6 +59,7 @@ export const initializePayment = async (
       phone,
       level: levelKey,
       dueId: due._id,
+      userId: req.user?.id || null,
       dueName: due.name,
       baseAmount,
       platformCommission,
@@ -146,6 +147,7 @@ else {
     const payment = new Payment({
       reference,
       amount: totalAmount,
+
       email,
       status: "pending",
       association: due.name,
@@ -213,27 +215,35 @@ export const verifyFlutterwavePayment = async (req: Request, res: Response) => {
     await payment.save();
 
 // Generate PDF buffer in memory (don't save to disk)
+const generateAndSendReceipt = (payment: any) => {
 const PDFDocument = require('pdfkit');
 const doc = new PDFDocument();
 const buffers: Buffer[] = [];
 
-doc.on('data', buffers.push.bind(buffers));
-doc.on('end', async () => {
-  const pdfBuffer = Buffer.concat(buffers);
+doc.on("data", buffers.push.bind(buffers));
+  doc.on("end", async () => {
+    const pdfBuffer = Buffer.concat(buffers);
+    if (payment.userEmail) {
+      await sendReceiptEmail(payment.userEmail, payment.reference, pdfBuffer);
+    }
+  });
 
-  // Send email
-  if (payment.email) {
-    await sendReceiptEmail(payment.email, payment.reference, pdfBuffer);
-  }
-});
-
-doc.fontSize(20).text('SwiftPay Receipt', { align: 'center' });
-doc.moveDown();
-doc.fontSize(14).text(`Reference: ${payment.reference}`);
-doc.text(`Name: ${payment.metadata?.payerName || 'N/A'}`);
-doc.text(`Matric: ${payment.metadata?.matricNumber || 'N/A'}`);
-// ... add all other fields like before
-doc.end();
+  doc.fontSize(25).text("SWIFTPAY OFFICIAL RECEIPT", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12).text(`Reference: ${payment.reference}`);
+  doc.text(`Date: ${new Date(payment.paidAt).toLocaleString()}`);
+  doc.moveDown();
+  doc.text(`Payer Name: ${payment.payerName}`);
+  doc.text(`Matric Number: ${payment.matricNumber}`);
+  doc.text(`Association: ${payment.dueName}`);
+  doc.text(`Level: ${payment.level}`);
+  doc.moveDown();
+  doc.fontSize(16).text(`Total Amount Paid: ₦${payment.amount.toLocaleString()}`);
+  doc.moveDown();
+  doc.fontSize(10).text("Thank you for using SwiftPay.", { align: "center" });
+  
+  doc.end();
+};
 
     console.log(`Flutterwave payment verified & saved: ${reference}`);
 
@@ -536,3 +546,51 @@ function sendReceiptEmail(email: string, reference: string, pdfBuffer: Buffer<Ar
   throw new Error("Function not implemented.");
 }
 
+// Add this to your paymentController.ts
+export const getPublicPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const { reference } = req.params;
+    // We only select the fields that are safe to show publicly
+    const payment = await Payment.findOne({ reference }).select('reference amount status paidAt payerName dueName level');
+
+    if (!payment) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
+
+    res.json(payment);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Add this to your paymentController.ts
+export const searchPublicReceipts = async (req: Request, res: Response) => {
+  try {
+    const { name, matric } = req.query;
+
+    if (!name && !matric) {
+      return res.status(400).json({ message: "Please provide a name or matric number" });
+    }
+
+    let query: any = { status: "success" };
+
+    // Search by name (case-insensitive)
+    if (name) {
+      query.payerName = { $regex: name as string, $options: "i" };
+    }
+
+    // Search by matric number (case-insensitive)
+    if (matric) {
+      query.matricNumber = { $regex: matric as string, $options: "i" };
+    }
+
+    const payments = await Payment.find(query)
+      .select('reference amount status paidAt payerName dueName level matricNumber')
+      .sort({ paidAt: -1 });
+
+    res.json(payments);
+  } catch (err) {
+    console.error("Public search error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
